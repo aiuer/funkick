@@ -33,9 +33,9 @@ body{min-height:100vh;min-height:100dvh;display:flex;justify-content:center;
 .logo{font-size:19px;font-weight:600;letter-spacing:.5px}
 .logo span{color:var(--acc)}
 .top .grow{flex:1}
-/* 工具按钮成组：窄屏时整组独占一行等宽铺开，否则中间的弹性占位会把「音效」
-   单独拽到第一行、剩下两个再换行，看起来像错位 */
+/* 工具按钮成组：窄屏时整组收进 ⚙ 下拉，省掉一整行（手机竖向空间全靠这么抠） */
 .tools{display:flex;align-items:center;gap:12px}
+.gear{display:none;align-items:center;justify-content:center}
 .iconbtn{border:1px solid var(--line);background:var(--panel);color:var(--sub);
   border-radius:9px;padding:7px 12px;font-size:13px;cursor:pointer;transition:.15s}
 .iconbtn:hover{border-color:var(--acc);color:var(--txt)}
@@ -213,13 +213,22 @@ body[data-theme="yuanxin"] .tbtn.sel{background:rgba(232,101,154,.15)}
   .leftcol{flex:1 1 100%}
   .gall{grid-template-columns:repeat(6,1fr)}
 }
-/* 手机：整体收紧一圈 —— 顶栏、HUD、候补区、弹窗都要缩 */
+/* 手机：整体收紧一圈 —— 顶栏、HUD、候补区、弹窗都要缩。
+   目标只有一个：把竖向空间全让给棋盘，让格子尽量大，同时**整局不超出一屏**。 */
 @media(max-width:620px){
-  body{padding-top:10px;padding-bottom:max(18px,env(safe-area-inset-bottom))}
-  .top{gap:8px;margin-bottom:10px}
+  body{padding-top:8px;padding-bottom:max(10px,env(safe-area-inset-bottom));
+       padding-left:max(8px,env(safe-area-inset-left));
+       padding-right:max(8px,env(safe-area-inset-right))}
+  .top{gap:8px;margin-bottom:8px;position:relative}   /* 下拉菜单以顶栏为定位基准 */
   .top .grow{display:none}
-  .tools{flex:1 1 100%;gap:8px}
-  .tools .iconbtn{flex:1 1 0;text-align:center;white-space:nowrap}
+  /* 音效/玩法/重开 收进 ⚙ 下拉：省掉一整行（约 44px），省下来的全给棋盘 */
+  .gear{display:inline-flex}
+  .tools{position:absolute;right:0;top:100%;z-index:60;display:none;
+    flex-direction:column;align-items:stretch;gap:6px;min-width:132px;
+    background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px;
+    box-shadow:0 14px 34px rgba(0,0,0,.55)}
+  .tools.open{display:flex}
+  .tools .iconbtn{text-align:left;border:0;background:transparent;padding:7px 8px}
   .logo{font-size:16px}
   .logo em{display:none}
   .iconbtn{padding:6px 9px;font-size:12px;border-radius:8px}
@@ -227,17 +236,21 @@ body[data-theme="yuanxin"] .tbtn.sel{background:rgba(232,101,154,.15)}
   .modechips button{padding:5px 9px;font-size:12px}
   .chipgroup{gap:5px}
   .chiplab{display:none}
-  .hud{grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px}
-  .card{padding:7px 9px;border-radius:10px}
-  .card .k{font-size:10px}
-  .card .v{font-size:16px}
-  .stage{gap:10px}
+  /* HUD 压成「一行 5 列」：原来 3 列要占两行，白白吃掉 44px 高度 */
+  .hud{grid-template-columns:repeat(5,1fr);gap:4px;margin-bottom:8px}
+  .card{padding:4px 6px;border-radius:8px}
+  .card .k{font-size:9px;letter-spacing:0}
+  .card .v{font-size:13px;margin-top:1px}
+  .stage{gap:6px}
+  .leftcol{gap:6px}
   /* 候补区换成竖排：标签在上、牌列在下，右侧那段说明直接藏掉，省横向空间 */
-  .qrow{flex-direction:column;align-items:flex-start;gap:6px}
-  .qlab{text-align:left}
+  .qrow{flex-direction:column;align-items:flex-start;gap:4px}
+  .qlab{text-align:left;font-size:11px}
+  /* 「4 张在列 · 共 8 张」在手机上和侧栏「本局数据」重复，去掉 */
+  .qlab small{display:none}
   .qhint{display:none}
-  .note{font-size:11.5px;line-height:1.6}
-  .boardwrap{padding:7px;border-radius:12px}
+  .note{display:none}                  /* 底部玩法说明收起，想看从 ⚙ 里点「玩法」 */
+  .boardwrap{padding:5px;border-radius:12px}
   .box{padding:10px 11px}
   .gall{grid-template-columns:repeat(4,1fr)}
   .sheet{padding:16px 15px;border-radius:14px;max-height:88vh}
@@ -251,8 +264,8 @@ body[data-theme="yuanxin"] .tbtn.sel{background:rgba(232,101,154,.15)}
 @media(max-width:380px){
   .logo{font-size:15px}
   .logo span{display:inline}
-  .hud{grid-template-columns:repeat(3,1fr)}
-  .card .v{font-size:15px}
+  .card .k{font-size:8.5px}
+  .card .v{font-size:12px}
   .btns button{font-size:12px}
 }
 /* 横屏矮屏：手机横过来只有 ~390px 高，必须狠挤一把才不用滚动 */
@@ -290,11 +303,12 @@ body[data-theme="yuanxin"] .tbtn.sel{background:rgba(232,101,154,.15)}
         <button data-m="hard">困难</button>
       </div>
     </div>
-    <div class="tools">
+    <div class="tools" id="tools">
       <button class="iconbtn" id="btnMute">🔊 音效</button>
       <button class="iconbtn" id="btnHelp">玩法</button>
       <button class="iconbtn" id="btnRestart">重开</button>
     </div>
+    <button class="iconbtn gear" id="btnTools" aria-label="设置">⚙</button>
   </div>
 
   <div class="hud" id="hud">
@@ -385,14 +399,26 @@ const CONFIG = {
   FX_RANGE: [2, 5],   // 彩蛋可能落在第 2 ~ 第 5 张之间
   FX_HOLD: 2200,      // 动图停留时长（毫秒），之后淡出消失
   FX_CAPS: ['拼成啦！', '漂亮！', '连上了！', '干得漂亮！'],
+  /* ---- 定点彩蛋 ----
+     拼到「某一张指定照片」时弹「某一个指定动图」，按模式区分。
+     · key 是照片身份：主题key + ':' + 图集里的 id（见 makePic()），
+       比如 'yuanxin:yx15' 就是沅信引力图集的第 15 张（0088Md9Kgy1ien8oevk0oj32dt1kw1ky.jpg）。
+     · 只在该照片所属主题下才可能触发（这张图属于沅信引力，经典图库里永远不会命中）。
+     · hold 可选：不写就用 FX_HOLD。这里两个动图各 3 秒，所以留出 3.2 秒播完一轮。 */
+  FX_PIC: {
+    'yuanxin:yx15': {
+      normal: { gif:'hug_light.gif',  cap:'抱一下～', hold:3200 },
+      hard:   { gif:'kiss_light.gif', cap:'亲一个～', hold:3200 }
+    }
+  },
   modes: {
     /* 普通：4×4＝16 格，同时排 4 张，消 8 张通关，限时 1:22（82 秒）
        plant:0 = 开局碎片全随机（用户要求「牌面全部随机」，不给任何预置的正确相邻块） */
-    normal: { name:'普通', cols:4, rows:4, maxCell:118, minCell:40, gap:6,
+    normal: { name:'普通', cols:4, rows:4, maxCell:118, minCell:40, gap:6, gapNarrow:4,
               target:8, timeStart:82, timeBonus:12, lives:3, timeScoreMax:200,
               hintCost:30, plant:0, goalSteps:4 },
     /* 困难：6×8＝48 格，同时排 12 张，消 16 张通关，限时 2:45（165 秒） */
-    hard:   { name:'困难', cols:6, rows:8, maxCell:78, minCell:26, gap:4,
+    hard:   { name:'困难', cols:6, rows:8, maxCell:78, minCell:26, gap:4, gapNarrow:3,
               target:16, timeStart:165, timeBonus:20, lives:3, timeScoreMax:250,
               hintCost:50, plant:0, goalSteps:8 }
   }
@@ -659,7 +685,13 @@ function computeCell(){
   const top=clamp(wrap.getBoundingClientRect().top + padY, 0, vh*0.45);   // 页面滚下去时按 0 算
   let reserved=178;                                   // 候补区 + 底部提示行 + 边距
   const qrow=document.querySelector('.qrow');
-  if(qrow){ const qh=qrow.getBoundingClientRect().height; if(qh>0) reserved=qh+24+22; }
+  if(qrow){ const qh=qrow.getBoundingClientRect().height; if(qh>0) reserved=qh+24; }
+  /* 底部说明行：手机上被 display:none 收掉了，就不能再当它占着位 ——
+     用 offsetParent 判断是否真的在渲染（display:none 时为 null） */
+  const noteEl=$('note');
+  if(noteEl && noteEl.offsetParent!==null){
+    const nh=noteEl.getBoundingClientRect().height; if(nh>0) reserved += nh+8;
+  }
   const availH=Math.max(150, vh - top - reserved);
   const byW=(availW - (S.cols-1)*S.gap) / S.cols;
   const byH=(availH - (S.rows-1)*S.gap) / S.rows;
@@ -729,6 +761,9 @@ function placeSizeAll(){
 
 function layoutBoard(){
   layoutQueue();          // 先定候补牌的尺寸，computeCell 量高度时才是准的
+  /* 手机上把格子间距调小（普通 6→4、困难 4→3）：同样一屏能塞下更大的格子。
+     必须放在算 cell 之前，cellPos/boardW 都读 S.gap。 */
+  S.gap = (isCompact() && S.M.gapNarrow!=null) ? S.M.gapNarrow : S.M.gap;
   S.cell=computeCell();
   PX = Math.round(clamp(S.cell*Math.min(window.devicePixelRatio||1,2)*1.9, 48, 300));
   /* 源图边长跟着「真实切片像素」走：4×4 大格拉到 640，8×12 小格降到 512，
@@ -773,12 +808,23 @@ let Q_STEP = 38;       // 每张牌向左叠压的步长：步长越大，露出
 const Q_FRAG_PX = 256; // 碎片位图边长：牌 CSS 最大 76px，留足 Retina 余量
 const qEls = new Map();
 
-/* 窄屏把牌和步长一起缩小，否则 4 张牌叠出来比屏幕还宽（尺寸走 CSS 变量） */
-function layoutQueue(){
+/* 窄屏判定：和 CSS 的 ≤620px 断点保持一致（牌尺寸、间距、工具下拉都看它） */
+function isNarrow(){
   const vw=Math.min(window.innerWidth, document.documentElement.clientWidth||1e9);
-  const narrow = vw <= 620;
-  Q_CARD = narrow ? 62 : 76;
-  Q_STEP = narrow ? 30 : 38;
+  return vw <= 620;
+}
+/* 紧凑档：窄屏 **或** 矮屏（手机横过来只有 ~390px 高）。
+   横屏虽然宽，但竖向一样紧张，所以牌和间距也要走小一档，否则候补区会被顶出一屏。 */
+function isCompact(){
+  const vh=(window.visualViewport && window.visualViewport.height) || window.innerHeight;
+  return isNarrow() || vh <= 560;
+}
+
+/* 紧凑档把牌和步长一起缩小，否则 4 张牌叠出来比屏幕还宽（尺寸走 CSS 变量） */
+function layoutQueue(){
+  const compact = isCompact();
+  Q_CARD = compact ? 52 : 76;
+  Q_STEP = compact ? 26 : 38;
   const root=document.documentElement.style;
   root.setProperty('--qcard', Q_CARD+'px');
   const host=$('queue'); if(!host) return;
@@ -1116,7 +1162,7 @@ function resolveBlock(br, bc){
   if(S.M.timeStart>0) S.timeLeft = Math.min(S.M.timeStart*1.6, S.timeLeft + S.M.timeBonus);
   S.gallery.push({ pic, score:sc.gain, url:thumbURL(pic) });
   renderGallery();
-  celebrateIfDue();
+  celebrateIfDue(pic);
 
   Sfx.clear(S.combo);
   burst(r.cx,r.cy);
@@ -1215,19 +1261,32 @@ function hideCelebrate(){
   clearTimeout(fxTimer);
   const box=$('fxpop'); if(box) box.classList.remove('on','out');
 }
+/* 本局已经弹过的「定点彩蛋」照片 —— 图集会被反复取用，同一张图一局里可能拼成两次，
+   不记一笔就会连着弹第二遍 */
+const fxDonePic = new Set();
 function resetCelebrate(){
   S.fxAt = CONFIG.FX_RANGE[0] + ((Math.random()*(CONFIG.FX_RANGE[1]-CONFIG.FX_RANGE[0]+1))|0);
+  fxDonePic.clear();
 }
-function celebrateIfDue(){
+/* 定点彩蛋优先于随机彩蛋：拼到 CONFIG.FX_PIC 里登记的照片 + 当前模式有配置，就弹指定动图，
+   并且把 S.fxAt 清掉（两者互斥），否则会连着弹两次。 */
+function celebrateIfDue(pic){
+  const hit = pic && CONFIG.FX_PIC[pic.key] && CONFIG.FX_PIC[pic.key][S.mode];
+  if(hit && !fxDonePic.has(pic.key)){
+    fxDonePic.add(pic.key);
+    S.fxAt=null;
+    setTimeout(()=>showCelebrate(hit.gif, hit.cap, hit.hold), 620);
+    return;
+  }
   if(S.fxAt==null || S.cleared!==S.fxAt) return;
   S.fxAt=null;
   setTimeout(showCelebrate, 620);      // 等飞散动画走完再弹，不然两段动效打架
 }
-function showCelebrate(){
+function showCelebrate(gif, capText, hold){
   const box=$('fxpop'), img=$('fximg'), cap=$('fxcap');
   if(!box || !img) return;
-  const src=CONFIG.FX_GIFS[(Math.random()*CONFIG.FX_GIFS.length)|0];
-  if(cap) cap.textContent=CONFIG.FX_CAPS[(Math.random()*CONFIG.FX_CAPS.length)|0];
+  const src=gif || CONFIG.FX_GIFS[(Math.random()*CONFIG.FX_GIFS.length)|0];
+  if(cap) cap.textContent=capText || CONFIG.FX_CAPS[(Math.random()*CONFIG.FX_CAPS.length)|0];
   clearTimeout(fxTimer);
   img.onerror=()=>{ box.classList.remove('on','out'); };   // 素材不存在：什么都不做
   img.onload=()=>{
@@ -1236,7 +1295,7 @@ function showCelebrate(){
     fxTimer=setTimeout(()=>{
       box.classList.add('out');
       fxTimer=setTimeout(()=>box.classList.remove('on','out'), 360);
-    }, CONFIG.FX_HOLD);
+    }, hold || CONFIG.FX_HOLD);
   };
   /* 末尾挂一个片段标识：同一张 gif 连续两局命中时也能从头播，而不是接着上一局那一帧 */
   img.src=src+'#'+(++fxSeq);
@@ -1487,9 +1546,9 @@ function openMenu(){
                      : '不限时 · 无生命，纯休闲')+'</small></div>';
   }).join('');
   showModal('<h2>拼图消消乐</h2><p class="desc">每张图切成 2×2 四块散落在棋盘上。<br>'+
-    '把同一张图的四块拼成一块 <b>2×2 相邻区域</b>（放在棋盘哪个位置都行），该图就会<b>碎片飞散</b>并消掉，'+
-    '这两列下方的碎片<b>整体上移</b>；棋盘下方的<b>候补区</b>里叠着一排牌，牌面是这张待入盘图上<b>随机位置、随机大小的一小块局部</b>，'+
-    '认不出是什么图，剩下三块长什么样也得等它入盘才知道。开局所有碎片<b>全随机打散</b>，没有任何预置的「送分对」。</p>'+
+    '把同一张图的四块拼成一块 <b>2×2 相邻区域</b>（棋盘哪个位置都行），该图就会<b>碎片飞散</b>并消掉，'+
+    '这两列下方的碎片<b>整体上移</b>，底部空位由<b>候补区</b>补一张新图。'+
+    '开局所有碎片<b>全随机打散</b>，没有任何预置的「送分对」。</p>'+
     '<div class="themerow" id="themeRow">'+themeRowHTML()+'</div>'+
     '<div class="optgrid">'+opts+'</div>'+
     '<div class="desc" id="themeHint" style="font-size:12px;margin:-4px 0 10px;display:none"></div>'+
@@ -1535,7 +1594,8 @@ function showHelp(){
     '计时归零扣 1 条命（各 3 条）并重新打乱，命用完即结束。<br>'+
     '<b>· 通关</b>：普通消除 8 张、困难 16 张。<br>'+
     '<b>· 彩蛋</b>：每局会在第 2~5 张之间随机挑一张，拼成时弹一个动图庆祝一下再消失（不影响操作、不暂停计时）。'+
-    '素材就是项目目录下的 fx-celebrate-1/2/3.gif，直接覆盖成自己的动图即可。</p>'+
+    '素材就是项目目录下的 fx-celebrate-1/2/3.gif；另外有「定点彩蛋」——'+
+    '拼到 CONFIG.FX_PIC 里登记的那张照片时，会按模式弹专属动图（普通 hug_light.gif / 困难 kiss_light.gif）。</p>'+
     '<div class="btns"><button class="primary" onclick="window.closeSheet()">知道了</button></div>');
 }
 window.showHelp=showHelp;
@@ -1580,6 +1640,16 @@ function syncChips(){
   $('modeChips').querySelectorAll('button').forEach(b=>
     b.classList.toggle('on', b.dataset.m===S.mode));
 }
+/* ⚙ 设置下拉（仅窄屏出现）：音效/玩法/重开 三个按钮原本要占一整行，
+   收进下拉后省下的高度全给棋盘。点任意一项即关闭，点空白处也关闭。 */
+function closeTools(){ const t=$('tools'); if(t) t.classList.remove('open'); }
+$('btnTools').onclick=e=>{ e.stopPropagation(); $('tools').classList.toggle('open'); };
+$('tools').addEventListener('click',e=>{
+  if(e.target.closest('button')) closeTools();
+});
+document.addEventListener('click',e=>{
+  if(!e.target.closest('#tools') && e.target.id!=='btnTools') closeTools();
+});
 $('btnMute').onclick=()=>{ const on=Sfx.toggle(); $('btnMute').textContent = on?'🔊 音效':'🔇 静音'; };
 $('btnHelp').onclick=()=>showHelp();
 $('btnRestart').onclick=()=>{ openMenu(); };
