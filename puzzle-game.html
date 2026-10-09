@@ -1,0 +1,1632 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<!-- user-scalable=no：拖拽碎片时双指/双击缩放会误触发，直接关掉；viewport-fit=cover 适配刘海屏 -->
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#080c18">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="format-detection" content="telephone=no">
+<title>拼图消消乐</title>
+<style>
+:root{
+  --bg:#080c18; --panel:#111731; --panel2:#182042; --line:#28325c;
+  --txt:#e9edfa; --sub:#94a1c9; --dim:#6b78a3;
+  --acc:#4f8cff; --ok:#37c98f; --warn:#f5a623; --bad:#f2607a; --gold:#ffd166;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--txt);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Segoe UI",sans-serif;
+  -webkit-font-smoothing:antialiased;overflow-x:hidden}
+body{min-height:100vh;min-height:100dvh;display:flex;justify-content:center;
+  padding:18px 14px 46px;
+  /* 刘海/小白条安全区：横屏时左右也要躲开 */
+  padding-left:max(14px,env(safe-area-inset-left));
+  padding-right:max(14px,env(safe-area-inset-right));
+  padding-bottom:max(46px,calc(24px + env(safe-area-inset-bottom)))}
+#app{width:100%;max-width:1020px;min-width:0}
+
+/* ---------- header ---------- */
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.logo{font-size:19px;font-weight:600;letter-spacing:.5px}
+.logo span{color:var(--acc)}
+.top .grow{flex:1}
+/* 工具按钮成组：窄屏时整组独占一行等宽铺开，否则中间的弹性占位会把「音效」
+   单独拽到第一行、剩下两个再换行，看起来像错位 */
+.tools{display:flex;align-items:center;gap:12px}
+.iconbtn{border:1px solid var(--line);background:var(--panel);color:var(--sub);
+  border-radius:9px;padding:7px 12px;font-size:13px;cursor:pointer;transition:.15s}
+.iconbtn:hover{border-color:var(--acc);color:var(--txt)}
+.modechips{display:flex;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:3px}
+.modechips button{background:transparent;border:0;color:var(--sub);font-size:13px;
+  padding:6px 13px;border-radius:8px;cursor:pointer}
+.modechips button.on{background:var(--acc);color:#fff;font-weight:500}
+.chipgroup{display:flex;align-items:center;gap:7px}
+.chiplab{font-size:11px;color:var(--dim);letter-spacing:.5px}
+.logo em{font-style:normal;font-size:11.5px;color:var(--sub);margin-left:9px;padding:2px 8px;
+  border:1px solid var(--line);border-radius:99px;vertical-align:2px;white-space:nowrap}
+
+/* ---------- hud ---------- */
+.hud{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:9px;margin-bottom:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:9px 12px}
+.card .k{font-size:11px;color:var(--dim);letter-spacing:.6px}
+.card .v{font-size:20px;font-weight:600;margin-top:2px;font-variant-numeric:tabular-nums}
+.card.warnbox{border-color:var(--bad)}
+.card.warnbox .v{color:var(--bad)}
+
+/* ---------- stage ---------- */
+.stage{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+/* min-width 必须能收缩到 0，否则窄屏（<340px）会被这条 300px 顶出横向滚动条 */
+.leftcol{flex:1 1 460px;min-width:0;max-width:100%;display:flex;flex-direction:column;align-items:center;gap:10px}
+.boardwrap{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:10px;max-width:100%}
+#board{position:relative;touch-action:none;user-select:none;-webkit-user-select:none}
+.slothint{position:absolute;pointer-events:none;border:2px dashed var(--gold);border-radius:10px;
+  box-shadow:0 0 0 3px rgba(255,209,102,.13),0 0 24px rgba(255,209,102,.32);z-index:30;
+  animation:slothint .85s ease-in-out infinite alternate}
+@keyframes slothint{from{opacity:.5}to{opacity:1}}
+.pc{position:absolute;left:0;top:0;border-radius:6px;cursor:pointer;z-index:2;perspective:760px;
+  transition:transform .34s cubic-bezier(.22,.85,.3,1)}
+.pc.nomove{transition:none}
+.pc-w{position:absolute;inset:0;transform-style:preserve-3d;border-radius:6px}
+.pc-cv{position:absolute;inset:0;width:100%;height:100%;display:block;border-radius:6px;
+  background:var(--panel2);backface-visibility:hidden;
+  transition:filter .18s,opacity .18s}
+.pc.sel .pc-cv{box-shadow:0 8px 22px rgba(0,0,0,.55)}
+.pc-back{position:absolute;inset:0;border-radius:6px;background:var(--panel2);
+  border:1px solid var(--line);backface-visibility:hidden;transform:rotateY(180deg);
+  display:flex;align-items:center;justify-content:center}
+.pc-back::after{content:'';width:26%;height:26%;border-radius:50%;
+  border:1.5px solid rgba(148,161,201,.45)}
+/* 状态描边统一走一层覆盖环：canvas 是替换元素，inset 阴影会被它自己的画面盖住，等于隐形 */
+.pc::after{content:'';position:absolute;inset:0;border:3px solid transparent;border-radius:6px;
+  pointer-events:none;transition:border-color .12s}
+.pc.sel::after{border-color:var(--gold)}
+.pc.onpic::after{border-color:rgba(79,140,255,.92)}
+.pc.correct::after{border-color:rgba(55,201,143,.95)}
+.pc.hintcell::after{border-color:var(--gold);border-style:dashed}
+
+.note{font-size:12px;color:var(--dim);line-height:1.7;text-align:center}
+/* 候补区：扇形叠压的纸牌，牌面是**一块碎片**（该图 4 个象限里随机一个，放大到整张牌），
+   不展示完整图片 —— 只能看出「这张图的一角长什么样」，属于什么图仍要拼到盘上才知道。
+   元素按「照片实例」做键，位置变化走 left 过渡 —— 所以消一张后是整体前移而不是重画 */
+.qrow{display:flex;align-items:center;justify-content:center;gap:16px;max-width:100%}
+.qlab{font-size:12px;color:var(--sub);text-align:right;line-height:1.55;white-space:nowrap}
+.qlab small{display:block;font-size:11px;color:var(--dim)}
+/* 候补牌的尺寸/叠压步长由 JS 写进 CSS 变量（窄屏会用小一号的牌），这里只留兜底值 */
+.queue{position:relative;width:196px;height:96px;flex:0 0 196px}
+.qcard{position:absolute;left:0;top:12px;
+  width:var(--qcard,76px);height:var(--qcard,76px);border-radius:9px;overflow:hidden;
+  background:var(--panel2);border:1px solid rgba(148,161,201,.26);
+  box-shadow:-4px 2px 10px rgba(0,0,0,.34);
+  transition:left .4s cubic-bezier(.22,.85,.3,1),top .4s cubic-bezier(.22,.85,.3,1),
+             opacity .3s ease,transform .4s cubic-bezier(.22,.85,.3,1)}
+.qcard .img{position:absolute;inset:0;background:#141a38}
+.qcard .frag{position:absolute;inset:0;width:100%;height:100%;display:block}
+.qcard .no{position:absolute;right:3px;bottom:3px;min-width:16px;height:16px;padding:0 4px;
+  border-radius:8px;background:rgba(6,10,26,.66);color:#eaf0ff;font-style:normal;font-size:10px;
+  line-height:16px;text-align:center;font-variant-numeric:tabular-nums}
+.qcard.first{top:0;border-color:var(--acc);
+  box-shadow:-4px 2px 12px rgba(0,0,0,.42)}
+.qcard.deal{opacity:0;transform:translate(-16px,-40px) scale(.82)}
+.qhint{font-size:11px;color:var(--dim);line-height:1.6}
+
+/* ---------- sidebar ---------- */
+.side{flex:0 0 268px;display:flex;flex-direction:column;gap:12px;min-width:240px}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 13px}
+.box h3{margin:0 0 9px;font-size:13px;font-weight:600;color:var(--txt)}
+.gall{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.gall div{aspect-ratio:1;border-radius:7px;overflow:hidden;cursor:pointer;
+  border:1px solid var(--line);background-size:cover;background-position:center;transition:.15s}
+.gall div:hover{transform:scale(1.06);border-color:var(--acc)}
+.gall .empty{background:var(--panel2);cursor:default;border-style:dashed}
+.gall .empty:hover{transform:none;border-color:var(--line)}
+.statline{display:flex;justify-content:space-between;font-size:12.5px;color:var(--sub);padding:3px 0}
+.statline b{color:var(--txt);font-weight:600;font-variant-numeric:tabular-nums}
+.btns{display:flex;gap:7px;flex-wrap:wrap}
+.btns button{flex:1 1 46%;border:1px solid var(--line);background:var(--panel2);color:var(--sub);
+  border-radius:9px;padding:8px 6px;font-size:12.5px;cursor:pointer;transition:.15s}
+.btns button:hover{border-color:var(--acc);color:var(--txt)}
+.btns button.primary{background:var(--acc);border-color:var(--acc);color:#fff}
+.bar{height:6px;background:var(--panel2);border-radius:99px;overflow:hidden;margin-top:8px}
+.bar i{display:block;height:100%;background:var(--ok);width:0;transition:width .3s}
+
+/* ---------- popups / overlays ---------- */
+.floatup{position:absolute;pointer-events:none;font-size:17px;font-weight:700;color:var(--gold);
+  text-shadow:0 2px 10px rgba(0,0,0,.7);animation:fu 1.05s ease-out forwards;z-index:40}
+@keyframes fu{0%{opacity:0;transform:translate(-50%,0) scale(.7)}
+  22%{opacity:1;transform:translate(-50%,-14px) scale(1.1)}
+  100%{opacity:0;transform:translate(-50%,-62px) scale(.95)}}
+.particle{position:absolute;width:8px;height:8px;border-radius:2px;pointer-events:none;z-index:39}
+#overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+  background:rgba(4,7,16,.72);backdrop-filter:blur(6px);z-index:80;padding:20px}
+#overlay.on{display:flex}
+.sheet{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px 24px;
+  max-width:520px;width:100%;max-height:86vh;overflow:auto;animation:pop .28s cubic-bezier(.2,.9,.3,1)}
+@keyframes pop{from{opacity:0;transform:translateY(18px) scale(.96)}to{opacity:1;transform:none}}
+.sheet h2{margin:0 0 4px;font-size:21px}
+.sheet .desc{color:var(--sub);font-size:13.5px;line-height:1.75;margin:0 0 14px}
+.sheet table{width:100%;border-collapse:collapse;font-size:13px;margin:6px 0 14px}
+.sheet td{padding:6px 4px;border-bottom:1px solid var(--line);color:var(--sub)}
+.sheet td:last-child{text-align:right;color:var(--txt);font-variant-numeric:tabular-nums}
+.sheet .btns button{margin-top:12px}
+.optgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px}
+.opt{border:1px solid var(--line);background:var(--panel2);border-radius:12px;padding:12px;cursor:pointer;text-align:left;transition:.15s}
+.opt:hover{border-color:var(--acc)}
+.opt.sel{border-color:var(--acc);background:rgba(79,140,255,.12)}
+.opt b{font-size:14px;display:block;margin-bottom:3px}
+.opt small{color:var(--dim);font-size:11.5px;line-height:1.6}
+.upzone{border:1.5px dashed var(--line);border-radius:12px;padding:14px;text-align:center;
+  color:var(--sub);font-size:13px;cursor:pointer;transition:.15s;margin-bottom:4px}
+.upzone:hover{border-color:var(--acc);color:var(--txt)}
+.winpix{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:10px 0 4px}
+.winpix div{aspect-ratio:1;border-radius:7px;background-size:cover;background-position:center;border:1px solid var(--line)}
+.modalpic{width:100%;border-radius:12px;display:block;margin-bottom:10px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+/* ---------- 主题「沅信引力」配色 ----------
+   取自图集的两种主色：洋红（345°）与蓝紫（225°），对应双人「引力」的双色 */
+body[data-theme="yuanxin"]{
+  --bg:#0c0916; --panel:#171129; --panel2:#221838; --line:#3b2a55;
+  --txt:#f4eefb; --sub:#b5a5d2; --dim:#83719f;
+  --acc:#e8659a; --ok:#4fd3a6; --gold:#ffc46b;
+}
+body[data-theme="yuanxin"] #app{position:relative}
+body[data-theme="yuanxin"] #app::before{
+  content:'';position:fixed;left:0;right:0;top:0;height:280px;pointer-events:none;z-index:0;
+  background:radial-gradient(58% 100% at 20% 0%,rgba(123,140,255,.22),transparent 70%),
+             radial-gradient(54% 100% at 80% 0%,rgba(232,101,154,.22),transparent 70%);
+}
+body[data-theme="yuanxin"] #app>*{position:relative;z-index:1}
+/* 主题选择 */
+.themerow{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:0 0 10px}
+.tbtn{border:1px solid var(--line);background:var(--panel2);color:var(--sub);border-radius:11px;
+  padding:9px 11px;font-size:13px;cursor:pointer;text-align:left;transition:.15s;font-family:inherit}
+.tbtn:hover{border-color:var(--acc);color:var(--txt)}
+.tbtn.sel{border-color:var(--acc);background:rgba(79,140,255,.13);color:var(--txt);font-weight:500}
+body[data-theme="yuanxin"] .tbtn.sel{background:rgba(232,101,154,.15)}
+.tbtn small{display:block;color:var(--dim);font-size:11px;margin-top:3px;font-weight:400}
+.tbtn.miss{opacity:.45;cursor:not-allowed}
+
+/* ---------- 彩蛋动图（第 2~5 张消除时随机弹一次） ----------
+   pointer-events:none —— 它是个「不影响操作」的庆祝层，盖在棋盘上但不吃点击，
+   计时也不会因此暂停。播完自动淡出，不留痕。 */
+#fxpop{position:fixed;inset:0;display:none;align-items:center;justify-content:center;
+  padding:16px;z-index:120;pointer-events:none}
+#fxpop.on{display:flex}
+.fxbox{display:flex;flex-direction:column;align-items:center;gap:8px;
+  animation:fxin .34s cubic-bezier(.2,.9,.3,1)}
+#fxpop.out .fxbox{animation:fxout .34s ease forwards}
+#fximg{width:min(72vw,300px);max-width:100%;display:block;border-radius:14px;
+  border:2px solid rgba(255,255,255,.3);box-shadow:0 20px 60px rgba(0,0,0,.62)}
+.fxcap{font-size:14px;font-weight:600;letter-spacing:.6px;color:#fff;
+  background:rgba(6,10,26,.72);border:1px solid rgba(255,255,255,.22);
+  padding:5px 14px;border-radius:99px;white-space:nowrap}
+@keyframes fxin{from{opacity:0;transform:scale(.74) translateY(18px)}to{opacity:1;transform:none}}
+@keyframes fxout{to{opacity:0;transform:scale(.88) translateY(-12px)}}
+
+/* ---------- 响应式 ---------- */
+/* 平板及以下：侧栏落到棋盘下方，占满整行 */
+@media(max-width:860px){
+  .side{flex:1 1 100%;min-width:0}
+  .leftcol{flex:1 1 100%}
+  .gall{grid-template-columns:repeat(6,1fr)}
+}
+/* 手机：整体收紧一圈 —— 顶栏、HUD、候补区、弹窗都要缩 */
+@media(max-width:620px){
+  body{padding-top:10px;padding-bottom:max(18px,env(safe-area-inset-bottom))}
+  .top{gap:8px;margin-bottom:10px}
+  .top .grow{display:none}
+  .tools{flex:1 1 100%;gap:8px}
+  .tools .iconbtn{flex:1 1 0;text-align:center;white-space:nowrap}
+  .logo{font-size:16px}
+  .logo em{display:none}
+  .iconbtn{padding:6px 9px;font-size:12px;border-radius:8px}
+  .modechips{padding:2px}
+  .modechips button{padding:5px 9px;font-size:12px}
+  .chipgroup{gap:5px}
+  .chiplab{display:none}
+  .hud{grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px}
+  .card{padding:7px 9px;border-radius:10px}
+  .card .k{font-size:10px}
+  .card .v{font-size:16px}
+  .stage{gap:10px}
+  /* 候补区换成竖排：标签在上、牌列在下，右侧那段说明直接藏掉，省横向空间 */
+  .qrow{flex-direction:column;align-items:flex-start;gap:6px}
+  .qlab{text-align:left}
+  .qhint{display:none}
+  .note{font-size:11.5px;line-height:1.6}
+  .boardwrap{padding:7px;border-radius:12px}
+  .box{padding:10px 11px}
+  .gall{grid-template-columns:repeat(4,1fr)}
+  .sheet{padding:16px 15px;border-radius:14px;max-height:88vh}
+  .sheet h2{font-size:18px}
+  .sheet .desc{font-size:12.5px;line-height:1.7}
+  .optgrid{grid-template-columns:1fr;gap:8px}
+  .themerow{grid-template-columns:1fr 1fr;gap:7px}
+  .winpix{grid-template-columns:repeat(4,1fr)}
+}
+/* 超窄屏（iPhone SE 竖屏等）：再降一档字号 */
+@media(max-width:380px){
+  .logo{font-size:15px}
+  .logo span{display:inline}
+  .hud{grid-template-columns:repeat(3,1fr)}
+  .card .v{font-size:15px}
+  .btns button{font-size:12px}
+}
+/* 横屏矮屏：手机横过来只有 ~390px 高，必须狠挤一把才不用滚动 */
+@media(max-height:560px) and (orientation:landscape){
+  body{padding-top:8px;padding-bottom:10px}
+  .top{margin-bottom:6px}
+  /* 横屏矮屏要的是「一行塞下」，工具组必须回到同行 */
+  .tools{flex:0 1 auto}
+  .tools .iconbtn{flex:0 0 auto}
+  .logo{font-size:15px}
+  .hud{grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:6px}
+  .card{padding:5px 8px}
+  .card .k{font-size:9.5px}
+  .card .v{font-size:14px}
+  .note{display:none}          /* 底部提示行整条收起，省约 40px */
+  .qhint{display:none}
+  .qrow{flex-direction:row;align-items:center;gap:10px}
+  .qlab{text-align:right}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="top">
+    <div class="logo">拼图<span>消消乐</span><em id="logoTheme"></em></div>
+    <div class="grow"></div>
+    <div class="chipgroup">
+      <span class="chiplab">主题</span>
+      <div class="modechips" id="themeChips"></div>
+    </div>
+    <div class="chipgroup">
+      <span class="chiplab">模式</span>
+      <div class="modechips" id="modeChips">
+        <button data-m="normal" class="on">普通</button>
+        <button data-m="hard">困难</button>
+      </div>
+    </div>
+    <div class="tools">
+      <button class="iconbtn" id="btnMute">🔊 音效</button>
+      <button class="iconbtn" id="btnHelp">玩法</button>
+      <button class="iconbtn" id="btnRestart">重开</button>
+    </div>
+  </div>
+
+  <div class="hud" id="hud">
+    <div class="card"><div class="k">得分</div><div class="v" id="vScore">0</div></div>
+    <div class="card"><div class="k">已消除</div><div class="v" id="vClear">0 / 10</div></div>
+    <div class="card" id="timeCard"><div class="k">剩余时间</div><div class="v" id="vTime">2:00</div></div>
+    <div class="card" id="livesCard"><div class="k">生命</div><div class="v" id="vLives">♥♥♥</div></div>
+    <div class="card"><div class="k">连击</div><div class="v" id="vCombo">×1.0</div></div>
+  </div>
+
+  <div class="stage">
+    <div class="leftcol">
+      <div class="boardwrap"><div id="board"></div></div>
+      <div class="qrow">
+        <div class="qlab">候补区<small id="vQueue2">4 张</small></div>
+        <div class="queue" id="queue"></div>
+        <div class="qhint">左起依序入盘<br>每张只露一小块碎片，认不出原图</div>
+      </div>
+      <div class="note" id="note">点两块互换位置，也可直接拖拽 · 同一张图的四块拼进任意 2×2 相邻格即会消散</div>
+    </div>
+    <div class="side">
+      <div class="box">
+        <h3>完成画廊</h3>
+        <div class="gall" id="gall"></div>
+        <div class="bar"><i id="progBar"></i></div>
+      </div>
+      <div class="box">
+        <h3>本局数据</h3>
+        <div class="statline"><span>已用步数</span><b id="vSteps">0</b></div>
+        <div class="statline"><span>棋盘容量</span><b id="vCap">12 张</b></div>
+        <div class="statline"><span>待入盘</span><b id="vQueue">4 张</b></div>
+        <div class="statline"><span>通关目标</span><b id="vTarget">10 张</b></div>
+      </div>
+      <div class="box">
+        <h3>操作</h3>
+        <div class="btns">
+          <button id="btnHint">提示</button>
+          <button id="btnShuffle">重排</button>
+          <button class="primary" id="btnUpload">上传图片</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="overlay"><div class="sheet" id="sheet"></div></div>
+<!-- 彩蛋动图：第 2~5 张消除时随机弹一次，播完自动消失。pointer-events:none，不吃操作 -->
+<div id="fxpop"><div class="fxbox"><img id="fximg" alt=""><div class="fxcap" id="fxcap">拼成啦！</div></div></div>
+<input type="file" id="fileInput" accept="image/*" multiple style="display:none">
+
+<!-- 主题图集：都内嵌为 data URL。文件缺失时自动降级，不影响游戏本身
+     · theme-classic.js —— 34 幅世界名画（CC0，从克利夫兰艺术博物馆开放接口抓取）
+                        缺这个文件时，「经典图库」自动退回原来的在线照片源
+     · theme-yuanxin.js —— 23 张本地双人合影，缺了则隐藏该主题 -->
+<script src="theme-classic.js"></script>
+<script src="theme-yuanxin.js"></script>
+
+<script>
+"use strict";
+/* ==================== CONFIG ==================== */
+const CONFIG = {
+  SRC: 720,          // 切片源图边长，运行时由 layoutBoard() 按棋盘格子像素自动改写
+  QUEUE_LEN: 4,
+  PRELOAD: 3,
+  SFX_VOL: 0.32,
+  GOAL_STEPS: 8,
+  COMBO_WINDOW: 12000,
+  COMBO_MUL: [1, 1.2, 1.5, 2.0],
+  BASE_SCORE: 100,
+  STEP_BONUS: 10,
+  TIMEOUT_PENALTY: 40,
+  SHUFFLE_COST: 20,
+  /* 开局给每张图预置几块「已经正确相邻」的碎片当落脚点：
+     2 = 成对（一眼能认出这 2 块属于同一张图）
+     1 = 单块
+     0 = 全随机打散（用户拍板：两个模式都用这个） */
+  PLANT: 0,
+  /* ---- 候补区牌面 ----
+     牌面不是「整张缩略图」，也不是「四分之一块」，而是从原图上随机抠一小块：
+     F_FRAG_MIN~MAX 是取景框边长占整图的比例。比例越小、位置越随机 → 越看不出原图。
+     调大这两个值会更容易认出牌面（更简单），调小则更「散」。 */
+  F_FRAG_MIN: 0.30,
+  F_FRAG_MAX: 0.48,
+  /* ---- 彩蛋动图 ----
+     一局里在「第彩蛋区间张」中随机挑一张拼成时弹一次；文件缺失会自动跳过，不报错。
+     想换素材：直接用同名 gif 覆盖项目根目录下这几个文件即可。 */
+  FX_GIFS: ['fx-celebrate-1.gif', 'fx-celebrate-2.gif', 'fx-celebrate-3.gif'],
+  FX_RANGE: [2, 5],   // 彩蛋可能落在第 2 ~ 第 5 张之间
+  FX_HOLD: 2200,      // 动图停留时长（毫秒），之后淡出消失
+  FX_CAPS: ['拼成啦！', '漂亮！', '连上了！', '干得漂亮！'],
+  modes: {
+    /* 普通：4×4＝16 格，同时排 4 张，消 8 张通关，限时 1:22（82 秒）
+       plant:0 = 开局碎片全随机（用户要求「牌面全部随机」，不给任何预置的正确相邻块） */
+    normal: { name:'普通', cols:4, rows:4, maxCell:118, minCell:40, gap:6,
+              target:8, timeStart:82, timeBonus:12, lives:3, timeScoreMax:200,
+              hintCost:30, plant:0, goalSteps:4 },
+    /* 困难：6×8＝48 格，同时排 12 张，消 16 张通关，限时 2:45（165 秒） */
+    hard:   { name:'困难', cols:6, rows:8, maxCell:78, minCell:26, gap:4,
+              target:16, timeStart:165, timeBonus:20, lives:3, timeScoreMax:250,
+              hintCost:50, plant:0, goalSteps:8 }
+  }
+};
+
+/* ==================== helpers ==================== */
+const $ = id => document.getElementById(id);
+const boardEl = $('board');
+const rnd = (a,b) => a + Math.random()*(b-a);
+const clamp = (v,a,b) => v<a?a:v>b?b:v;
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const t=a[i];a[i]=a[j];a[j]=t; } return a; }
+
+/* ==================== SFX ==================== */
+const Sfx = (() => {
+  let ctx=null, on=true;
+  const ac = () => { if(!ctx){ try{ ctx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ on=false; } } return ctx; };
+  function tone(freq, dur, type, vol, delay, slideTo){
+    if(!on) return; const c=ac(); if(!c) return;
+    const t0=c.currentTime+(delay||0);
+    const o=c.createOscillator(), g=c.createGain();
+    o.type=type||'sine'; o.frequency.setValueAtTime(freq,t0);
+    if(slideTo) o.frequency.exponentialRampToValueAtTime(slideTo,t0+dur);
+    const v=(vol==null?0.3:vol)*CONFIG.SFX_VOL;
+    g.gain.setValueAtTime(0.0001,t0);
+    g.gain.exponentialRampToValueAtTime(v,t0+0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+    o.connect(g); g.connect(c.destination); o.start(t0); o.stop(t0+dur+0.03);
+  }
+  function noise(dur, vol, filt){
+    if(!on) return; const c=ac(); if(!c) return;
+    const n=Math.floor(c.sampleRate*dur);
+    const buf=c.createBuffer(1,n,c.sampleRate), d=buf.getChannelData(0);
+    for(let i=0;i<n;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/n,2.2);
+    const s=c.createBufferSource(); s.buffer=buf;
+    const bp=c.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=filt||1400;
+    const g=c.createGain(); g.gain.value=(vol||0.25)*CONFIG.SFX_VOL;
+    s.connect(bp); bp.connect(g); g.connect(c.destination); s.start();
+  }
+  return {
+    get enabled(){ return on; },
+    toggle(){ on=!on; if(on){ const c=ac(); if(c&&c.state==='suspended') c.resume(); tone(660,.09,'sine',.25); } return on; },
+    pick(){ tone(520,.07,'square',.16); },
+    swap(){ noise(.07,.16,1900); tone(300,.09,'triangle',.18,0,420); },
+    wrong(){ tone(180,.16,'sawtooth',.14,0,120); },
+    clear(combo){
+      const base=[523.25,587.33,659.25,783.99,880][clamp(combo-1,0,4)];
+      const seq=combo>=3?[0,4,7,12]:[0,7];
+      seq.forEach((s,i)=> tone(base*Math.pow(2,s/12), .3,'sine',.26, i*.075));
+      noise(.3,.1,700);
+    },
+    tick(){ tone(1180,.05,'square',.12); },
+    drop(){ tone(90,.28,'sine',.22,0,55); noise(.2,.1,320); },
+    win(){ [523.25,659.25,783.99,1046.5,1318.5].forEach((f,i)=>tone(f,.55,'sine',.28,i*.11)); },
+    lose(){ [392,349.23,293.66,246.94].forEach((f,i)=>tone(f,.5,'triangle',.24,i*.13)); },
+    hint(){ tone(880,.1,'sine',.2); tone(1174,.12,'sine',.16,.09); },
+    theme(){ tone(659.25,.2,'sine',.2); tone(987.77,.26,'sine',.18,.08); }
+  };
+})();
+
+/* ==================== 主题 ==================== */
+/* classic：34 幅世界名画，由 theme-classic.js 内嵌 data URL 提供（CC0，高清、离线可玩）。
+           该文件缺失时自动退回原来的在线照片源（picsum），主题照常能用。
+   yuanxin：本地 23 张合影，由 theme-yuanxin.js 内嵌 data URL 提供，离线可玩 */
+const THEMES = {
+  classic: { key:'classic', name:'经典图库', short:'经典',   kind:'pack' },
+  yuanxin: { key:'yuanxin', name:'沅信引力', short:'沅信引力', kind:'pack' }
+};
+const THEME_ORDER = ['classic','yuanxin'];
+
+/* 取主题图集（文件缺失时返回 null，游戏会自动隐藏该主题而不是报错） */
+function themePack(key){
+  const p = window.THEME_PACKS && window.THEME_PACKS[key];
+  return (p && p.photos && p.photos.length) ? p : null;
+}
+function themeAvailable(key){ return key==='classic' ? true : !!themePack(key); }
+/* 经典图库是唯一「图集缺了也能玩」的主题：退回在线照片源 */
+function classicOnline(){ return !themePack('classic'); }
+function themeSub(key){
+  if(key==='classic' && classicOnline()) return '在线精选 · 70 张（名画图集缺失，已自动在线取图）';
+  const pk=themePack(key);
+  return pk ? (pk.desc || (pk.count+' 张')) : '图集文件缺失 · 需与 HTML 同目录';
+}
+
+/* ==================== image pool ==================== */
+const PHOTO_IDS = [];
+for(let i=10;i<=79;i++) PHOTO_IDS.push(i);
+let idBag = [];
+let uploadSeq = 0;
+let packBag = [], packBagTheme = '';
+
+function nextPhotoId(){
+  if(!idBag.length) idBag = shuffle(PHOTO_IDS.slice());
+  return idBag.pop();
+}
+function makePic(){
+  if(uploadPool.length) return uploadPool.shift();
+  const theme = S.theme || 'classic';
+  const pk = themePack(theme);
+  if(pk){
+    if(packBagTheme!==theme || !packBag.length){
+      packBagTheme = theme;
+      /* 发牌顺序：把「已经出现在盘面或队列里」的照片排到前面、没用过的排到后面，
+         而 bag 从尾部取 —— 于是优先发没用过的照片。 */
+      const used = new Set(S.pieces.map(p=>p.pic.key).concat(S.queue.map(q=>q.key)));
+      const fresh = [], seen = [];
+      pk.photos.forEach((ph,i)=>{ (used.has(theme+':'+ph.id) ? seen : fresh).push(i); });
+      packBag = shuffle(seen).concat(shuffle(fresh));
+    }
+    const ph = pk.photos[packBag.pop()];
+    /* key = 照片身份：同一张照片可能以多个 pic 实例同时出现（图集被反复取用），
+       判定一律比 key，不能比对象引用 */
+    const key = theme + ':' + ph.id;
+    return { id:key, key, pid:key, kind:'pack', url:ph.data, src:null, cvs:{}, thumb:null, steps:0 };
+  }
+  const pid = 'p' + nextPhotoId();
+  return { id:pid, key:pid, pid, kind:'remote', url:null, src:null, cvs:{}, thumb:null, steps:0 };
+}
+/* 两块碎片是否属于「同一张照片」——按身份而非对象引用比对，
+   否则同图复用时会冒出「画面明明拼好了却不消散」 */
+function samePic(a,b){ return !!a && !!b && a.key===b.key; }
+
+const uploadPool = [];
+
+function fallbackCanvas(seed){
+  const S=CONFIG.SRC, cv=document.createElement('canvas'); cv.width=cv.height=S;
+  const x=cv.getContext('2d');
+  let h=0; for(let i=0;i<seed.length;i++) h=(h*31+seed.charCodeAt(i))>>>0;
+  const hue=h%360, hue2=(hue+140)%360;
+  const g=x.createLinearGradient(0,0,S,S);
+  g.addColorStop(0,'hsl('+hue+',72%,52%)'); g.addColorStop(1,'hsl('+hue2+',68%,34%)');
+  x.fillStyle=g; x.fillRect(0,0,S,S);
+  for(let i=0;i<16;i++){
+    const r=(h>>i)%1||Math.random();
+    x.globalAlpha=0.10+((h>>(i*2))%7)/22;
+    x.fillStyle=i%3===0?'#fff':'hsl('+((hue+i*23)%360)+',80%,60%)';
+    x.beginPath();
+    x.arc(((h*(i+3))%S), ((h*(i+7))%S), 30+((h>>i)%150), 0, Math.PI*2); x.fill();
+  }
+  x.globalAlpha=1;
+  for(let i=0;i<8;i++){
+    x.strokeStyle='rgba(255,255,255,'+(0.05+i*0.02)+')'; x.lineWidth=1+i*1.6;
+    x.beginPath(); x.moveTo(0,(h*(i+2))%S); x.lineTo(S,((h*(i+5))%S)); x.stroke();
+  }
+  return cv;
+}
+
+function isFlatImg(srcObj){
+  try{
+    const w = srcObj.naturalWidth || srcObj.width;
+    const h = srcObj.naturalHeight || srcObj.height;
+    if(!w || !h) return true;
+    const c=document.createElement('canvas'); c.width=c.height=8;
+    const x=c.getContext('2d'); x.drawImage(srcObj,0,0,8,8);
+    const d=x.getImageData(0,0,8,8).data;
+    const mn=[255,255,255], mx=[0,0,0];
+    for(let i=0;i<d.length;i+=4) for(let k=0;k<3;k++){
+      if(d[i+k]<mn[k]) mn[k]=d[i+k];
+      if(d[i+k]>mx[k]) mx[k]=d[i+k];
+    }
+    return ((mx[0]-mn[0])+(mx[1]-mn[1])+(mx[2]-mn[2])) < 42;
+  }catch(e){ return false; }
+}
+
+function ensureSrc(pic){
+  return new Promise(resolve=>{
+    if(pic.src){ resolve(pic.src); return; }
+    if(pic.loading){ pic.waiters=pic.waiters||[]; pic.waiters.push(resolve); return; }
+    pic.loading=true;
+    const done = srcObj => {
+      pic.src=srcObj; pic.loading=false;
+      (pic.waiters||[]).forEach(f=>f(srcObj)); pic.waiters=[];
+      resolve(srcObj);
+    };
+    const useFallback = () => done(fallbackCanvas(pic.id||('gen'+Math.random())));
+    let settled=false;
+    const timer=setTimeout(()=>{ if(!settled){ settled=true; useFallback(); } }, 7000);
+    const img=new Image();
+    if(pic.kind==='remote') img.crossOrigin='anonymous';
+    img.onload=()=>{
+      if(settled) return; settled=true; clearTimeout(timer);
+      /* 只有在线图需要「糊图检测」——图集/上传都是用户自己的照片，不做降级 */
+      if(pic.kind==='remote' && isFlatImg(img)) useFallback(); else done(img);
+    };
+    img.onerror=()=>{ if(settled) return; settled=true; clearTimeout(timer); useFallback(); };
+    img.src = pic.url ? pic.url
+      : 'https://picsum.photos/id/'+pic.pid+'/'+CONFIG.SRC+'/'+CONFIG.SRC;
+  });
+}
+
+function cropOf(srcObj){
+  const w = srcObj.naturalWidth || srcObj.width;
+  const h = srcObj.naturalHeight || srcObj.height;
+  const s = Math.min(w,h);
+  return { sx:(w-s)/2, sy:(h-s)/2, s };
+}
+
+function pieceCanvas(pic, q, px){
+  const key = q+'_'+px;
+  if(pic.cvs[key]) return pic.cvs[key];
+  const cv=document.createElement('canvas'); cv.width=cv.height=px;
+  const x=cv.getContext('2d');
+  if(pic.src){
+    const c=cropOf(pic.src), half=c.s/2;
+    x.imageSmoothingEnabled=true; x.imageSmoothingQuality='high';
+    try{
+      x.drawImage(pic.src, c.sx+(q%2)*half, c.sy+((q>>1)*half), half, half, 0,0, px,px);
+    }catch(e){ x.fillStyle='#223'; x.fillRect(0,0,px,px); }
+  } else { x.fillStyle='#1a2145'; x.fillRect(0,0,px,px); }
+  pic.cvs[key]=cv;
+  return cv;
+}
+
+function thumbOf(pic){
+  if(pic.thumb) return pic.thumb;
+  const px=256, cv=document.createElement('canvas'); cv.width=cv.height=px;
+  const x=cv.getContext('2d');
+  if(pic.src){
+    const c=cropOf(pic.src);
+    x.imageSmoothingEnabled=true; x.imageSmoothingQuality='high';
+    try{ x.drawImage(pic.src, c.sx,c.sy,c.s,c.s, 0,0, px,px); }
+    catch(e){ x.fillStyle='#223'; x.fillRect(0,0,px,px); }
+  } else { x.fillStyle='#1a2145'; x.fillRect(0,0,px,px); }
+  pic.thumb=cv;
+  return cv;
+}
+function thumbURL(pic){
+  try{ return thumbOf(pic).toDataURL('image/jpeg',0.82); }catch(e){ return ''; }
+}
+
+/* ==================== state ==================== */
+const S = {
+  mode:'normal', M:null, theme:'classic',
+  cols:6, rows:8, mcols:3, mrows:4, nslots:12, ncells:48,
+  cell:40, gap:4,       // 所有碎片统一同一种间距（无组内/组间之分）
+  occ: [],          // cell index -> piece
+  pieces: [],       // live piece objects
+  queue: [],
+  phase:'menu',     // menu | loading | playing | resolving | over
+  score:0, steps:0, lives:3, cleared:0, combo:0, lastClearAt:0,
+  timeLeft:0, lastTickSec:99,
+  fxAt:null,        // 本局彩蛋落在「第几张消除」，startGame 时随机定；触发后置 null
+  pics:[],  gallery:[], hint:{el:null,tel:null,box:null}, sel:-1,
+  timer:null, lastFrame:0
+};
+
+let PX = 72;  // piece canvas pixel size (device aware)
+
+/* 棋盘格边长按「真实可用空间」算，而不是拍脑袋减几个固定像素 —— 手机上才能吃满宽度。
+   · 宽度：量 .leftcol（它的宽度由 flex 决定，不随棋盘大小反推，所以不会来回震荡），
+           再扣掉 .boardwrap 的 padding/border。
+   · 高度：量棋盘容器在视口里的位置，减去候补区与底部提示行占的高度。
+   两条都取小者，最后夹在模式的 minCell~maxCell 之间。 */
+function computeCell(){
+  const M=S.M;
+  const wrap=boardEl.parentElement;
+  const cs=getComputedStyle(wrap);
+  const padX=(parseFloat(cs.paddingLeft)||0)+(parseFloat(cs.paddingRight)||0);
+  const padY=(parseFloat(cs.paddingTop)||0)+(parseFloat(cs.paddingBottom)||0);
+  const bdX=(parseFloat(cs.borderLeftWidth)||0)+(parseFloat(cs.borderRightWidth)||0);
+  const col=wrap.parentElement;                       // .leftcol
+  const colW=col?col.clientWidth:window.innerWidth;
+  const availW=Math.min(Math.max(colW - padX - bdX - 2, 180), 520);
+  const vh=(window.visualViewport && window.visualViewport.height) || window.innerHeight;
+  const top=clamp(wrap.getBoundingClientRect().top + padY, 0, vh*0.45);   // 页面滚下去时按 0 算
+  let reserved=178;                                   // 候补区 + 底部提示行 + 边距
+  const qrow=document.querySelector('.qrow');
+  if(qrow){ const qh=qrow.getBoundingClientRect().height; if(qh>0) reserved=qh+24+22; }
+  const availH=Math.max(150, vh - top - reserved);
+  const byW=(availW - (S.cols-1)*S.gap) / S.cols;
+  const byH=(availH - (S.rows-1)*S.gap) / S.rows;
+  return clamp(Math.floor(Math.min(byW, byH)), M.minCell, M.maxCell);
+}
+function boardW(){ return S.cols*S.cell + (S.cols-1)*S.gap; }
+function boardH(){ return S.rows*S.cell + (S.rows-1)*S.gap; }
+function cellPos(i){
+  const p=S.cell+S.gap;
+  return { x:(i%S.cols)*p, y:Math.floor(i/S.cols)*p };
+}
+/* 任意一块「2×2 相邻格子」——左上角在 (row,col)。
+   它不再被绑死在 3×4 的槽位网格上：玩家把四块拼到棋盘任何位置，
+   只要这 2×2 相邻区域里是同一张图且各自象限正确，就该消散。 */
+function blockCells(row,col){
+  const i=row*S.cols+col;
+  return [ i, i+1, i+S.cols, i+S.cols+1 ];   // [左上, 右上, 左下, 右下]
+}
+function blockRect(row,col){
+  const A=cellPos(row*S.cols+col), B=cellPos((row+1)*S.cols+col+1);
+  return { x:A.x, y:A.y, w:B.x-A.x+S.cell, h:B.y-A.y+S.cell,
+           cx:A.x+(B.x-A.x+S.cell)/2, cy:A.y+(B.y-A.y+S.cell)/2 };
+}
+/* 扫描全盘所有 2×2 相邻区域，返回第一个「同图且象限全对」的块 */
+function findCompleteBlock(){
+  for(let r=0;r+1<S.rows;r++)
+    for(let c=0;c+1<S.cols;c++)
+      if(blockComplete(r,c)) return { r, c };
+  return null;
+}
+function blockComplete(r,c){
+  const a=S.occ[r*S.cols+c], b=S.occ[r*S.cols+c+1];
+  const d=S.occ[(r+1)*S.cols+c], e=S.occ[(r+1)*S.cols+c+1];
+  if(!a||!b||!d||!e) return false;
+  const pic=a.pic;
+  if(!samePic(pic,b.pic)||!samePic(pic,d.pic)||!samePic(pic,e.pic)) return false;
+  return a.q===0 && b.q===1 && d.q===2 && e.q===3;
+}
+
+/* ==================== build ==================== */
+function newPiece(pic, q, cell){
+  const el=document.createElement('div');
+  el.className='pc'; el.style.width=S.cell+'px'; el.style.height=S.cell+'px';
+  const cv=pieceCanvas(pic,q,PX);
+  const im=document.createElement('canvas');
+  im.className='pc-cv'; im.width=cv.width; im.height=cv.height;
+  im.getContext('2d').drawImage(cv,0,0);
+  const back=document.createElement('div'); back.className='pc-back';
+  const wrap=document.createElement('div'); wrap.className='pc-w';
+  wrap.appendChild(back); wrap.appendChild(im);
+  el.appendChild(wrap);
+  const p={ pic, q, el, im, wrap, cell };
+  el.__p=p;
+  el.addEventListener('pointerdown',ev=>downPiece(ev,p));
+  return p;
+}
+function place(p, cell, animate){
+  p.cell=cell; S.occ[cell]=p;
+  const pos=cellPos(cell);
+  if(!animate){ p.el.classList.add('nomove'); }
+  p.el.style.transform='translate3d('+pos.x+'px,'+pos.y+'px,0)';
+  if(!animate){ void p.el.offsetWidth; p.el.classList.remove('nomove'); }
+}
+function placeSizeAll(){
+  S.pieces.forEach(p=>{ p.el.style.width=S.cell+'px'; p.el.style.height=S.cell+'px'; });
+}
+
+function layoutBoard(){
+  layoutQueue();          // 先定候补牌的尺寸，computeCell 量高度时才是准的
+  S.cell=computeCell();
+  PX = Math.round(clamp(S.cell*Math.min(window.devicePixelRatio||1,2)*1.9, 48, 300));
+  /* 源图边长跟着「真实切片像素」走：4×4 大格拉到 640，8×12 小格降到 512，
+     既不糊也不白占内存。必须赶在 ensureSrc 拉图之前算出来（startGame 就是这个顺序）。 */
+  CONFIG.SRC = clamp(Math.ceil(PX*2/128)*128, 512, 1280);
+  boardEl.style.width = boardW() + 'px';
+  boardEl.style.height= boardH() + 'px';
+  placeSizeAll();
+  S.pieces.forEach(p => { if(p.cell>=0){ const q=cellPos(p.cell); p.el.style.transform='translate3d('+q.x+'px,'+q.y+'px,0)'; } });
+  markCorrect();
+}
+
+function markCorrect(){
+  S.pieces.forEach(p=>p.el.classList.remove('onpic','correct'));
+  const ordered=new Set(), partial=new Set();
+  for(let r=0;r+1<S.rows;r++) for(let c=0;c+1<S.cols;c++){
+    const a=S.occ[r*S.cols+c], b=S.occ[r*S.cols+c+1];
+    const d=S.occ[(r+1)*S.cols+c], e=S.occ[(r+1)*S.cols+c+1];
+    if(!a||!b||!d||!e) continue;
+    const pic=a.pic;
+    if(!samePic(pic,b.pic)||!samePic(pic,d.pic)||!samePic(pic,e.pic)) continue;
+    const ok = a.q===0 && b.q===1 && d.q===2 && e.q===3;
+    [a,b,d,e].forEach(p=> (ok?ordered:partial).add(p));
+  }
+  partial.forEach(p=>{ if(!ordered.has(p)) p.el.classList.add('onpic'); });
+  ordered.forEach(p=>p.el.classList.add('correct'));
+}
+
+function clearBoard(){
+  S.pieces.forEach(p=>p.el.remove());
+  S.pieces=[]; S.occ=new Array(S.ncells).fill(null);
+  boardEl.querySelectorAll('.pc,.floatup,.particle,.slothint').forEach(e=>e.remove());
+}
+
+/* ==================== queue ==================== */
+/* 候补区：四张牌叠压成一列，牌面是这张待入盘照片的**一块碎片**（4 个象限里随机一个，
+   放大铺满整张牌），看不到完整图片。象限在牌生成时抽定，之后再渲染不重摇。
+   元素按「照片实例」建键复用，位移走 CSS 过渡，
+   所以「消一张 → 首张飞入棋盘 → 其余整体前移 → 末尾补新牌」是一条连续动画而不是重画。 */
+let Q_CARD = 76;       // 牌面边长：窄屏会缩到 62，见 layoutQueue()
+let Q_STEP = 38;       // 每张牌向左叠压的步长：步长越大，露出的碎片越多
+const Q_FRAG_PX = 256; // 碎片位图边长：牌 CSS 最大 76px，留足 Retina 余量
+const qEls = new Map();
+
+/* 窄屏把牌和步长一起缩小，否则 4 张牌叠出来比屏幕还宽（尺寸走 CSS 变量） */
+function layoutQueue(){
+  const vw=Math.min(window.innerWidth, document.documentElement.clientWidth||1e9);
+  const narrow = vw <= 620;
+  Q_CARD = narrow ? 62 : 76;
+  Q_STEP = narrow ? 30 : 38;
+  const root=document.documentElement.style;
+  root.setProperty('--qcard', Q_CARD+'px');
+  const host=$('queue'); if(!host) return;
+  const w=Q_CARD + (CONFIG.QUEUE_LEN-1)*Q_STEP + 6;
+  host.style.width=w+'px'; host.style.flexBasis=w+'px';
+  host.style.height=(Q_CARD+20)+'px';
+}
+
+/* 牌面 = 从原图上随机抠的一小块（位置随机、大小随机），放大铺满整张牌。
+   随机参数在「牌生成时」抽定，之后重渲染不重摇 —— 否则每次 renderQueue 都换一张脸。
+   ensureSrc 完成后才画，避免首帧出现空白牌。 */
+function paintCard(card,pic){
+  ensureSrc(pic).then(()=>{
+    if(!card.isConnected) return;
+    const host=card.querySelector('.img'); if(!host) return;
+    let cv=card.querySelector('.frag');
+    if(!cv){ cv=document.createElement('canvas'); cv.className='frag'; cv.width=cv.height=Q_FRAG_PX; host.appendChild(cv); }
+    const src=pic.src; if(!src) return;
+    const x=cv.getContext('2d');
+    x.clearRect(0,0,Q_FRAG_PX,Q_FRAG_PX);
+    const c=cropOf(src);
+    const fs=clamp(+(card.dataset.fs||0.4),0.12,1);          // 取景框边长 / 整图边长
+    const fx=clamp(+(card.dataset.fx||0),0,1);               // 取景框左上角在剩余空间里的比例
+    const fy=clamp(+(card.dataset.fy||0),0,1);
+    const s=c.s*fs;
+    const sx=c.sx + (c.s-s)*fx;
+    const sy=c.sy + (c.s-s)*fy;
+    x.imageSmoothingEnabled=true; x.imageSmoothingQuality='high';
+    try{ x.drawImage(src, sx,sy,s,s, 0,0,Q_FRAG_PX,Q_FRAG_PX); }catch(e){}
+  });
+}
+function pushQueue(){
+  const pic=makePic();
+  S.queue.push(pic);
+  ensureSrc(pic).then(()=>{ renderQueue(); preloadHead(); });
+  return pic;
+}
+function preloadHead(){
+  S.queue.forEach((p,i)=>{ if(i<CONFIG.PRELOAD) ensureSrc(p); });
+}
+function renderQueue(){
+  const host=$('queue');
+  const head=S.queue.slice(0,CONFIG.QUEUE_LEN);
+  const keep=new Set(head);
+  /* 已经不在窗口里的牌：被抽走的飞向棋盘，被挤掉的淡出 */
+  qEls.forEach((el,pic)=>{
+    if(keep.has(pic)) return;
+    qEls.delete(pic);
+    el.classList.add('deal');
+    setTimeout(()=>el.remove(), 480);
+  });
+  head.forEach((pic,i)=>{
+    let card=qEls.get(pic);
+    if(card){
+      card.dataset.i=String(i);
+      card.style.left=(Q_STEP*i)+'px';
+    }else{
+      card=document.createElement('div');
+      card.className='qcard';
+      card.innerHTML='<div class="img"></div><i class="no"></i>';
+      card.dataset.i=String(i);
+      /* 这块牌露原图的哪一小块：大小与位置全部随机，生成时抽定（重渲染不重摇） */
+      card.dataset.fs=(CONFIG.F_FRAG_MIN + Math.random()*(CONFIG.F_FRAG_MAX-CONFIG.F_FRAG_MIN)).toFixed(3);
+      card.dataset.fx=Math.random().toFixed(3);
+      card.dataset.fy=Math.random().toFixed(3);
+      card.style.left=((CONFIG.QUEUE_LEN+1)*Q_STEP)+'px';
+      card.style.opacity='0';
+      host.appendChild(card);
+      qEls.set(pic,card);
+      paintCard(card,pic);
+      /* 用「强制一次重排」而不是 requestAnimationFrame 来起过渡：
+         rAF 在页面无其它定时任务时可能迟迟不回调（后台标签页、无头截图），
+         牌就会一直停在 opacity:0 —— 逻辑上在、看着却是一片空白。
+         void offsetWidth 是同步的，过渡照样会跑。 */
+      void card.offsetWidth;
+      card.style.left=(Q_STEP*i)+'px';
+      card.style.opacity='1';
+    }
+    card.classList.toggle('first', i===0);
+    card.style.zIndex=String(200-i);
+    const no=card.querySelector('.no'); if(no) no.textContent=String(i+1);
+  });
+  $('vQueue').textContent=S.queue.length+' 张';
+  const q2=$('vQueue2');
+  if(q2) q2.textContent=head.length+' 张在列 · 共 '+S.queue.length+' 张';
+}
+
+/* ==================== game start ==================== */
+async function startGame(mode){
+  S.mode=mode; S.M=CONFIG.modes[mode];
+  S.cols=S.M.cols; S.rows=S.M.rows; S.gap=S.M.gap;
+  S.mcols=S.cols/2; S.mrows=S.rows/2;
+  S.nslots=S.mcols*S.mrows; S.ncells=S.cols*S.rows;
+  S.score=0; S.steps=0; S.lives=S.M.lives; S.cleared=0; S.combo=0;
+  S.timeLeft=S.M.timeStart; S.lastTickSec=99;
+  S.gallery=[]; S.sel=-1; S.lastClearAt=0;
+  S.hint={el:null,tel:null,box:null};
+  resetCelebrate();                 // 本局彩蛋落在第几张，开局抽定
+  hideCelebrate();
+  S.phase='loading';
+  syncChips(); applyTheme();
+  clearBoard();
+  hideModal();
+  S.queue=[]; uploadPool.length=0;
+  /* 候补区元素是按「照片实例」建键复用的，重开一局必须把上一局的牌和键表一起清掉，
+     否则上一局的牌会被认成同一张、留在页面上 */
+  qEls.forEach(el=>el.remove()); qEls.clear();
+  $('queue').innerHTML='';
+  for(let i=0;i<S.nslots+CONFIG.QUEUE_LEN;i++) pushQueue();
+  S.cell=computeCell();
+  layoutBoard();
+  $('gall').innerHTML=''; renderGallery();
+  updateHud();
+  $('note').textContent='正在生成高清图源…';
+  await Promise.all(S.queue.map(p=>ensureSrc(p)));
+  await fillInitial();
+  S.phase='playing';
+  startTimer();
+  updateHud();
+  renderQueue();
+  if(location.hash==='#autosolve') setTimeout(autoSolveStep,600);
+}
+
+async function fillInitial(){
+  const pics=[];
+  for(let s=0;s<S.nslots;s++){
+    const pic=S.queue.shift();
+    await ensureSrc(pic);
+    pic.steps=0; pics.push(pic);
+  }
+  while(S.queue.length<S.nslots+CONFIG.QUEUE_LEN) pushQueue();
+  S.occ=new Array(S.ncells).fill(null);
+
+  const placed=[], used=new Array(S.ncells).fill(false);
+  const blocks=[];
+  for(let r=0;r+1<S.rows;r++) for(let c=0;c+1<S.cols;c++) blocks.push([r,c]);
+  const pairSets=[[0,1],[0,2],[1,3],[2,3]];      // 4 种「两块正确相邻」的组合
+  /* 上手辅助（plantN）现在两个模式都是 0 → 下面这段不生效，开局全随机打散。
+     想再放回「送分对」只需把模式里的 plant 改回 1 或 2，代码不用动。 */
+  const plantCfg = (S.M && S.M.plant!=null) ? S.M.plant : CONFIG.PLANT;
+  const plantN = plantCfg>=2 ? 2 : (plantCfg===1 ? 1 : 0);
+
+  function plant(pic, qs){
+    const pool=shuffle(blocks.slice());
+    for(const [r,c] of pool){
+      const cs=blockCells(r,c);
+      if(qs.every(q=>!used[cs[q]])){
+        qs.forEach(q=>{ used[cs[q]]=true; placed.push({ pic, q, cell:cs[q] }); });
+        return true;
+      }
+    }
+    return false;
+  }
+  if(plantN>0) shuffle(pics.slice()).forEach(pic=>{
+    if(plantN>=2) plant(pic, pairSets[(Math.random()*pairSets.length)|0]);
+    else plant(pic, [(Math.random()*4)|0]);
+  });
+
+  /* 其余碎片全盘随机打散 */
+  const loose=[];
+  pics.forEach(pic=>{
+    const have=new Set(placed.filter(o=>o.pic===pic).map(o=>o.q));
+    for(let q=0;q<4;q++) if(!have.has(q)) loose.push({ pic, q });
+  });
+  const free=[]; for(let i=0;i<S.ncells;i++) if(!used[i]) free.push(i);
+  let list=null, tries=0;
+  do{
+    shuffle(loose);
+    list=placed.concat(loose.map((o,i)=>({ pic:o.pic, q:o.q, cell:free[i] })));
+  } while(tries++<200 && hasAnyComplete(list));
+
+  list.forEach(o=>{
+    const p=newPiece(o.pic,o.q,o.cell);
+    S.pieces.push(p);
+    S.occ[o.cell]=p;
+    const pos=cellPos(o.cell);
+    p.el.style.transform='translate3d('+pos.x+'px,'+pos.y+'px,0)';
+    boardEl.appendChild(p.el);
+  });
+  layoutBoard();
+  $('note').textContent='点两块互换位置，也可直接拖拽 · 开局碎片全随机打散 · 同一张图的四块拼进任意 2×2 相邻格即会消散 · 候补区每张牌只露一小块碎片，认不出原图';
+}
+/* 给定一份 {cell,pic,q} 列表，判断盘面上是否已经存在拼好的 2×2（开局自检用） */
+function hasAnyComplete(list){
+  const grid=new Array(S.ncells);
+  list.forEach(o=>{ if(o.cell!=null) grid[o.cell]=o; });
+  for(let r=0;r+1<S.rows;r++) for(let c=0;c+1<S.cols;c++){
+    const a=grid[r*S.cols+c], b=grid[r*S.cols+c+1];
+    const d=grid[(r+1)*S.cols+c], e=grid[(r+1)*S.cols+c+1];
+    if(!a||!b||!d||!e) continue;
+    if(!samePic(a.pic,b.pic)||!samePic(a.pic,d.pic)||!samePic(a.pic,e.pic)) continue;
+    if(a.q===0&&b.q===1&&d.q===2&&e.q===3) return true;
+  }
+  return false;
+}
+
+/* ==================== interaction ==================== */
+let drag=null;
+function cellAtPoint(clientX, clientY){
+  const r=boardEl.getBoundingClientRect();
+  const x=clientX-r.left, y=clientY-r.top;
+  let best=-1, bd=Infinity;
+  for(let i=0;i<S.ncells;i++){
+    const pos=cellPos(i);
+    const dx=x-(pos.x+S.cell/2), dy=y-(pos.y+S.cell/2);
+    const d=dx*dx+dy*dy;
+    if(d<bd){ bd=d; best=i; }
+  }
+  return best;
+}
+function downPiece(ev,p){
+  if(S.phase!=='playing') return;
+  ev.preventDefault();
+  drag={ p, sx:ev.clientX, sy:ev.clientY, moved:false, base:cellPos(p.cell) };
+  clearSfxOnce();
+  try{ p.el.setPointerCapture(ev.pointerId); }catch(e){}
+  window.addEventListener('pointermove',moveDrag);
+  window.addEventListener('pointerup',upDrag);
+}
+function moveDrag(ev){
+  if(!drag) return;
+  const dx=ev.clientX-drag.sx, dy=ev.clientY-drag.sy;
+  if(!drag.moved && Math.abs(dx)+Math.abs(dy)>7){
+    drag.moved=true;
+    drag.p.el.classList.add('nomove');
+    drag.p.el.style.zIndex=20;
+    Sfx.pick();
+    if(S.sel>=0){ const q=S.occ[S.sel]; if(q) q.el.classList.remove('sel'); S.sel=-1; }
+  }
+  if(drag.moved){
+    const b=drag.base;
+    drag.p.el.style.transform='translate3d('+(b.x+dx)+'px,'+(b.y+dy)+'px,0)';
+    drag.target=cellAtPoint(ev.clientX,ev.clientY);
+  }
+}
+function upDrag(ev){
+  window.removeEventListener('pointermove',moveDrag);
+  window.removeEventListener('pointerup',upDrag);
+  if(!drag) return;
+  const d=drag; drag=null;
+  d.p.el.style.zIndex='';
+  if(d.moved){
+    d.p.el.classList.remove('nomove');
+    const t=d.target;
+    if(t!=null && t!==d.p.cell && S.occ[t]) doSwap(d.p.cell,t);
+    else { place(d.p,d.p.cell,true); if(t!=d.p.cell) Sfx.wrong(); }
+    return;
+  }
+  selectCell(d.p.cell);
+}
+let sfxPlayed=false;
+function clearSfxOnce(){ sfxPlayed=false; }
+function selectCell(cell){
+  const p=S.occ[cell]; if(!p) return;
+  if(S.sel<0){ S.sel=cell; p.el.classList.add('sel'); Sfx.pick(); return; }
+  if(S.sel===cell){ p.el.classList.remove('sel'); S.sel=-1; Sfx.pick(); return; }
+  const a=S.sel; const pa=S.occ[a];
+  pa.el.classList.remove('sel'); S.sel=-1;
+  doSwap(a,cell);
+}
+function doSwap(a,b){
+  const pa=S.occ[a], pb=S.occ[b];
+  if(!pa||!pb||a===b) return;
+  S.occ[a]=pb; S.occ[b]=pa;
+  place(pa,b,true); place(pb,a,true);
+  S.steps++;
+  /* 少步奖励按「照片」累计：同图复用时要连带同一张照片的其他实例一起计步 */
+  const keys=new Set([pa.pic.key, pb.pic.key]);
+  S.pieces.forEach(p=>{ if(keys.has(p.pic.key)) p.pic.steps++; });
+  Sfx.swap();
+  clearHint();
+  markCorrect(); updateHud();
+  setTimeout(tryResolve, 360);
+}
+
+/* ==================== clear & collapse ==================== */
+function tryResolve(){
+  if(S.phase!=='playing') return;
+  const hit=findCompleteBlock();
+  if(!hit) return;
+  S.phase='resolving';
+  resolveBlock(hit.r, hit.c);
+}
+
+function floatText(x,y,txt,color){
+  const d=document.createElement('div');
+  d.className='floatup'; d.textContent=txt;
+  if(color) d.style.color=color;
+  d.style.left=x+'px'; d.style.top=y+'px';
+  boardEl.appendChild(d);
+  setTimeout(()=>d.remove(),1100);
+}
+function burst(cx,cy){
+  const colors=['#ffd166','#4f8cff','#37c98f','#f2607a','#ffffff','#a78bfa'];
+  for(let i=0;i<18;i++){
+    const d=document.createElement('div');
+    d.className='particle';
+    d.style.background=colors[(Math.random()*colors.length)|0];
+    d.style.left=cx+'px'; d.style.top=cy+'px';
+    boardEl.appendChild(d);
+    const ang=rnd(-Math.PI,Math.PI), dist=rnd(50,140);
+    d.animate([
+      {transform:'translate(-50%,-50%) scale(1)',opacity:1},
+      {transform:'translate('+Math.cos(ang)*dist+'px,'+(Math.sin(ang)*dist-40)+'px) rotate('+rnd(180,540)+'deg) scale(.25)',opacity:0}
+    ],{duration:rnd(560,900),easing:'cubic-bezier(.2,.7,.3,1)'}).onfinish=()=>d.remove();
+  }
+}
+
+function scoreFor(pic){
+  /* 不限时的模式 timeStart = 0，不能拿它当分母，否则 timeRatio 会变成 NaN 把整条得分链污染 */
+  const timed = S.M.timeStart > 0;
+  const timeRatio = timed ? clamp(S.timeLeft/S.M.timeStart,0,1) : 0;
+  const timeBonus = Math.round(S.M.timeScoreMax*timeRatio);
+  const goal = (S.M.goalSteps!=null) ? S.M.goalSteps : CONFIG.GOAL_STEPS;
+  const stepBonus=Math.max(0, goal-pic.steps)*CONFIG.STEP_BONUS;
+  const base=CONFIG.BASE_SCORE;
+  return { timeBonus, stepBonus, base, gain: Math.round((base+timeBonus+stepBonus)*curMul()) };
+}
+function curMul(){ return CONFIG.COMBO_MUL[clamp(S.combo,0,CONFIG.COMBO_MUL.length-1)]; }
+
+function resolveBlock(br, bc){
+  clearHint();
+  if(S.sel>=0){ const q=S.occ[S.sel]; if(q) q.el.classList.remove('sel'); S.sel=-1; }
+  S.pieces.forEach(p=>p.el.classList.remove('sel'));
+  const ids=blockCells(br,bc);
+  const pic=S.occ[ids[0]].pic;
+  const r=blockRect(br,bc);
+  const now=performance.now();
+  if(now - S.lastClearAt < CONFIG.COMBO_WINDOW) S.combo++; else S.combo=1;
+  S.lastClearAt=now;
+
+  const sc=scoreFor(pic);
+  S.score += sc.gain;
+  S.cleared++;
+  if(S.M.timeStart>0) S.timeLeft = Math.min(S.M.timeStart*1.6, S.timeLeft + S.M.timeBonus);
+  S.gallery.push({ pic, score:sc.gain, url:thumbURL(pic) });
+  renderGallery();
+  celebrateIfDue();
+
+  Sfx.clear(S.combo);
+  burst(r.cx,r.cy);
+  floatText(r.cx, r.y, '+'+sc.gain);
+  if(S.combo>1) setTimeout(()=>floatText(r.cx, r.y-24, '连击 ×'+curMul(), '#ffd166'), 140);
+  updateHud();
+
+  let delay=0;
+  ids.forEach((ci,k)=>{
+    const p=S.occ[ci]; if(!p) return;
+    S.occ[ci]=null;
+    const idx=S.pieces.indexOf(p); if(idx>=0) S.pieces.splice(idx,1);
+    const dx=rnd(-46,46), dy=-90-rnd(20,90), rot=rnd(-70,70);
+    p.im.animate([
+      {transform:'none',opacity:1},
+      {transform:'translate('+dx+'px,'+dy+'px) rotate('+rot+'deg) scale(.45)',opacity:0}
+    ],{duration:520,delay:k*45,easing:'cubic-bezier(.4,.1,.7,.6)',fill:'forwards'});
+    delay=Math.max(delay,520+k*45);
+    setTimeout(()=>p.el.remove(), delay+40);
+  });
+
+  setTimeout(()=>{
+    collapseColumns(bc, br);
+    markCorrect(); updateHud();
+    setTimeout(()=>{
+      if(S.cleared >= S.M.target){ winGame(); return; }
+      S.phase='playing';
+      tryResolve();
+    }, 380);
+  }, delay+30);
+}
+
+/* 消除后：这两列中「位于空洞下方」的碎片整体上移 2 格，最底部由待入盘队列补一张新图 */
+function collapseColumns(bc, br){
+  for(const cc of [bc, bc+1]){
+    for(let row=br+2; row<S.rows; row++){
+      const src=row*S.cols+cc, dst=src-2*S.cols;
+      const p=S.occ[src];
+      S.occ[src]=null;
+      if(p) place(p,dst,true);
+    }
+  }
+  spawnPictureAt(bc, S.rows-2);
+  Sfx.drop();
+}
+/* 从待入盘队列取一张：优先取「盘面上还没有」的照片。
+   队列里可能有「盘上已经出现过的照片」（图集有限、走到后期必然重复），
+   这条挑选规则保证它们不会被优先补入，盘上的同图复用被压到理论最小值。
+   注意：困难模式现在是 6×8＝12 个图位，图集 23 张够用，开局不会强制重复。 */
+function takeFromQueue(){
+  if(!S.queue.length) return makePic();
+  const onBoard = new Set(S.pieces.map(p=>p.pic.key));
+  for(let i=0;i<S.queue.length;i++){
+    if(!onBoard.has(S.queue[i].key)){
+      /* 换到队首再取，保证下方队列里显示的「下一张」就是真·下一张 */
+      if(i>0){ const t=S.queue[0]; S.queue[0]=S.queue[i]; S.queue[i]=t; }
+      return S.queue.shift();
+    }
+  }
+  return S.queue.shift();
+}
+/* 把一张新图的四块碎片（象限打乱）放进底部 2×2 相邻格，逐块 3D 翻面入场 */
+function spawnPictureAt(bc, r0){
+  const pic = takeFromQueue();
+  /* 先补齐队列并立刻重画候补区：首张牌当场飞入棋盘、其余整体前移、末尾滑进一张新牌。
+     放在 ensureSrc 之前，前移动画才不会被高清图下载拖住。 */
+  while(S.queue.length<S.nslots+CONFIG.QUEUE_LEN) pushQueue();
+  renderQueue();
+  ensureSrc(pic).then(()=>{
+    pic.steps=0;
+    const cells=blockCells(r0,bc);
+    let order=shuffle([0,1,2,3]), guard=0;
+    while(guard++<20 && order.every((q,k)=>q===k)) order=shuffle([0,1,2,3]);
+    order.forEach((q,k)=>{
+      const p=newPiece(pic,q,cells[k]);
+      S.pieces.push(p); S.occ[cells[k]]=p;
+      place(p,cells[k],false);
+      boardEl.appendChild(p.el);
+      p.wrap.animate([
+        {transform:'translateY('+Math.round(S.rows*S.cell*0.26)+'px) perspective(760px) rotateY(180deg) scale(.84)',opacity:0},
+        {transform:'translateY(0) perspective(760px) rotateY(0deg) scale(1)',opacity:1}
+      ],{duration:480,delay:k*70,easing:'cubic-bezier(.2,.85,.3,1)'});
+    });
+    markCorrect();
+  });
+}
+
+/* ==================== 彩蛋动图 ====================
+   每局开局就抽定一个「第几张消除时触发」的序号（默认落在第 2~5 张之间），
+   拼到那一张时弹一个 GIF 庆祝一下、停留两秒左右自动淡出消失。
+   · 不影响操作：整层 pointer-events:none、也不暂停计时
+   · 素材缺失（只拷了 HTML 没拷 gif）会静默跳过，不报错不卡流程
+   · 想换素材：把 fx-celebrate-*.gif 覆盖成自己的动图，或改 CONFIG.FX_GIFS */
+let fxTimer=null, fxSeq=0;
+function hideCelebrate(){
+  clearTimeout(fxTimer);
+  const box=$('fxpop'); if(box) box.classList.remove('on','out');
+}
+function resetCelebrate(){
+  S.fxAt = CONFIG.FX_RANGE[0] + ((Math.random()*(CONFIG.FX_RANGE[1]-CONFIG.FX_RANGE[0]+1))|0);
+}
+function celebrateIfDue(){
+  if(S.fxAt==null || S.cleared!==S.fxAt) return;
+  S.fxAt=null;
+  setTimeout(showCelebrate, 620);      // 等飞散动画走完再弹，不然两段动效打架
+}
+function showCelebrate(){
+  const box=$('fxpop'), img=$('fximg'), cap=$('fxcap');
+  if(!box || !img) return;
+  const src=CONFIG.FX_GIFS[(Math.random()*CONFIG.FX_GIFS.length)|0];
+  if(cap) cap.textContent=CONFIG.FX_CAPS[(Math.random()*CONFIG.FX_CAPS.length)|0];
+  clearTimeout(fxTimer);
+  img.onerror=()=>{ box.classList.remove('on','out'); };   // 素材不存在：什么都不做
+  img.onload=()=>{
+    box.classList.remove('out'); box.classList.add('on');
+    clearTimeout(fxTimer);
+    fxTimer=setTimeout(()=>{
+      box.classList.add('out');
+      fxTimer=setTimeout(()=>box.classList.remove('on','out'), 360);
+    }, CONFIG.FX_HOLD);
+  };
+  /* 末尾挂一个片段标识：同一张 gif 连续两局命中时也能从头播，而不是接着上一局那一帧 */
+  img.src=src+'#'+(++fxSeq);
+}
+
+/* ==================== timer ==================== */
+/* timeStart = 0 表示不限时（当前两个模式都限时，这里保留兜底以防以后加休闲模式） */
+function startTimer(){
+  stopTimer();
+  if(!S.M || S.M.timeStart<=0){ S.timeLeft=0; updateTime(); return; }
+  S.lastFrame=performance.now();
+  S.timer=setInterval(()=>{
+    if(S.phase!=='playing'){ S.lastFrame=performance.now(); return; }
+    const now=performance.now();
+    const dt=(now-S.lastFrame)/1000; S.lastFrame=now;
+    S.timeLeft-=dt;
+    if(S.timeLeft<=10){
+      const sec=Math.ceil(S.timeLeft);
+      if(sec!==S.lastTickSec){ S.lastTickSec=sec; if(sec>0) Sfx.tick(); }
+    }
+    if(S.timeLeft<=0){ S.timeLeft=0; timeout(); return; }
+    updateTime();
+  },100);
+}
+function stopTimer(){ if(S.timer){ clearInterval(S.timer); S.timer=null; } }
+function fmtTime(t){ const s=Math.max(0,Math.ceil(t)); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+
+function timeout(){
+  S.lives--;
+  S.score=Math.max(0, S.score-CONFIG.TIMEOUT_PENALTY);
+  S.combo=0;
+  Sfx.lose();
+  if(S.lives<=0){ endGame(false); return; }
+  S.timeLeft=S.M.timeStart; S.lastTickSec=99;
+  S.phase='paused';
+  updateHud();
+  window.__resumeTimeout = function(){
+    hideModal(); S.phase='playing'; S.lastFrame=performance.now(); reshuffleAll();
+  };
+  showModal(
+    '<h2>时间到</h2><p class="desc">扣 1 条命、扣分 '+CONFIG.TIMEOUT_PENALTY+'，棋盘重新打乱后继续。<br>还剩 <b>'+S.lives+'</b> 条命。</p>'+
+    '<div class="btns"><button class="primary" onclick="window.__resumeTimeout()">继续</button></div>');
+}
+
+/* 只打乱位置：每块碎片自己的「图 + 象限」保持不变，画面与逻辑始终一致 */
+function reshuffleAll(){
+  const onBoard=S.pieces.filter(p=>p.cell>=0);
+  if(!onBoard.length) return;
+  const cells=onBoard.map(p=>p.cell);
+  let tries=0;
+  do{
+    shuffle(cells);
+    S.occ=new Array(S.ncells).fill(null);
+    onBoard.forEach((p,i)=>{ p.cell=cells[i]; S.occ[cells[i]]=p; });
+  } while(tries++<60 && findCompleteBlock());
+  onBoard.forEach(p=>place(p,p.cell,true));
+  markCorrect();
+  setTimeout(tryResolve,400);
+}
+
+/* ==================== hint ==================== */
+/* 以某张图的某一块为锚点，反推出「若它是正确象限，2×2 应该落在哪里」，
+   数出这个位置里已经正确就位的块数；取全盘最高分的那个锚点。 */
+function bestProgress(){
+  let best=null;
+  const byPic=new Map();
+  S.pieces.forEach(p=>{
+    if(!(p.cell>=0)) return;
+    let m=byPic.get(p.pic); if(!m){ m={}; byPic.set(p.pic,m); }
+    m[p.q]=p;
+  });
+  byPic.forEach((pos,pic)=>{
+    for(let q=0;q<4;q++){
+      const anchor=pos[q]; if(!anchor) continue;
+      const ar=Math.floor(anchor.cell/S.cols)-(q>>1);
+      const ac=(anchor.cell%S.cols)-(q%2);
+      if(ar<0||ac<0||ar+1>=S.rows||ac+1>=S.cols) continue;
+      let cnt=0; const missing=[];
+      for(let k=0;k<4;k++){
+        const cell=(ar+(k>>1))*S.cols+(ac+(k%2));
+        const p=S.occ[cell];
+        if(p && p.pic===pic && p.q===k) cnt++;
+        else missing.push({ k, cell });
+      }
+      if(!best || cnt>best.cnt) best={ pic, ar, ac, cnt, missing };
+    }
+  });
+  return best;
+}
+/* 挑一步「一定能让某张图更接近拼好」的交换：
+   优先把块内缺的象限从块外换进来（净收益 +1），其次换掉被别的图占着的格子 */
+function planHook(best){
+  const cells=new Set(blockCells(best.ar,best.ac));
+  const srcByQ={};
+  S.pieces.forEach(p=>{ if(p.pic===best.pic && p.cell>=0) srcByQ[p.q]=p; });
+  let pick=null, bestP=99;
+  for(const m of best.missing){
+    const src=srcByQ[m.k];
+    if(!src || src.cell===m.cell) continue;
+    const occ=S.occ[m.cell];
+    const pr = cells.has(src.cell) ? 2 : ((occ && occ.pic!==best.pic) ? 0 : 1);
+    if(pr<bestP){ bestP=pr; pick={ m, src }; }
+  }
+  return pick;
+}
+function useHint(){
+  if(S.phase!=='playing') return;
+  const best=bestProgress();
+  if(!best || best.cnt>=4 || !best.missing.length) return;
+  const pick=planHook(best);
+  if(!pick) return;
+  S.score=Math.max(0,S.score-S.M.hintCost);
+  Sfx.hint(); updateHud(); clearHint();
+  const tp=S.occ[pick.m.cell];
+  const box=document.createElement('div'); box.className='slothint';
+  const r=blockRect(best.ar,best.ac);
+  box.style.left=(r.x-4)+'px'; box.style.top=(r.y-4)+'px';
+  box.style.width=(r.w+8)+'px'; box.style.height=(r.h+8)+'px';
+  boardEl.appendChild(box);
+  S.hint={ el:pick.src.el, tel:tp?tp.el:null, box };
+  pick.src.el.classList.add('sel');
+  if(tp) tp.el.classList.add('hintcell');
+  const pos=cellPos(pick.src.cell);
+  floatText(pos.x+S.cell/2, pos.y, '这块 →', '#ffd166');
+  setTimeout(clearHint, 3000);
+}
+function clearHint(){
+  if(S.hint.el) S.hint.el.classList.remove('sel');
+  if(S.hint.tel) S.hint.tel.classList.remove('hintcell');
+  boardEl.querySelectorAll('.pc.hintcell').forEach(e=>e.classList.remove('hintcell'));
+  boardEl.querySelectorAll('.slothint').forEach(e=>e.remove());
+  S.hint={el:null,tel:null,box:null};
+}
+
+/* ==================== gallery / hud ==================== */
+function renderGallery(){
+  const host=$('gall'); host.innerHTML='';
+  const need=Math.max(6, Math.min(12, S.M?S.M.target:10));
+  for(let i=0;i<need;i++){
+    const d=document.createElement('div');
+    const g=S.gallery[i];
+    if(g){ d.style.backgroundImage='url('+g.url+')'; d.title='第 '+(i+1)+' 张 · +'+g.score;
+           d.onclick=()=>showBigPic(g); }
+    else d.className='empty';
+    host.appendChild(d);
+  }
+  const pct = S.M ? Math.min(100, S.cleared/S.M.target*100) : 0;
+  $('progBar').style.width=pct+'%';
+}
+function showBigPic(g){
+  showModal('<h2>已完成 · 第 '+(S.gallery.indexOf(g)+1)+' 张</h2>'+
+    '<img class="modalpic" src="'+g.url+'">'+
+    '<p class="desc">这张入账 <b>'+g.score+'</b> 分</p>'+
+    '<div class="btns"><button class="primary" onclick="hideModal()">关闭</button></div>');
+}
+function updateHud(){
+  $('vScore').textContent=S.score.toLocaleString('en-US');
+  $('vClear').textContent=S.cleared+' / '+(S.M?S.M.target:'-');
+  $('vSteps').textContent=S.steps;
+  $('vCombo').textContent='×'+curMul().toFixed(1);
+  $('vLives').textContent=S.lives>0?'♥'.repeat(S.lives):'—';
+  $('vCap').textContent=S.nslots+' 张';
+  $('vTarget').textContent=(S.M?S.M.target:'-')+' 张';
+  updateTime();
+  const pct=S.M?Math.min(100,S.cleared/S.M.target*100):0;
+  $('progBar').style.width=pct+'%';
+}
+function updateTime(){
+  const unlimited = !S.M || S.M.timeStart<=0;
+  $('vTime').textContent = unlimited ? '不限时' : fmtTime(S.timeLeft);
+  $('timeCard').classList.toggle('warnbox', !unlimited && S.timeLeft<=10 && S.phase==='playing');
+  $('timeCard').style.display = unlimited ? 'none' : '';
+  const lc=$('livesCard');
+  if(lc) lc.style.display = (S.M && S.M.lives>0) ? '' : 'none';
+}
+
+/* ==================== end ==================== */
+function winGame(){
+  S.phase='over'; stopTimer();
+  Sfx.win();
+  const pics=S.gallery.map(g=>'<div style="background-image:url('+g.url+')"></div>').join('');
+  showModal('<h2>通关！</h2><p class="desc">'+S.M.name+'模式 · '+THEMES[S.theme].name+' · 消除 '+S.cleared+' 张 · 总步数 '+S.steps+
+    '<br>最终得分 <b style="font-size:22px;color:#ffd166">'+S.score.toLocaleString('en-US')+'</b></p>'+
+    '<div class="winpix">'+pics+'</div>'+
+    '<div class="btns"><button class="primary" onclick="hideModal();startGame(\''+S.mode+'\')">再来一局</button>'+
+    '<button onclick="hideModal();openMenu()">换个模式</button></div>');
+}
+function endGame(){
+  S.phase='over'; stopTimer();
+  Sfx.lose();
+  showModal('<h2>游戏结束</h2><p class="desc">生命用完了。<br>消除了 <b>'+S.cleared+'</b> 张 · 得分 <b>'+S.score.toLocaleString('en-US')+'</b></p>'+
+    '<div class="btns"><button class="primary" onclick="hideModal();startGame(\''+S.mode+'\')">重来</button>'+
+    '<button onclick="hideModal();openMenu()">换个模式</button></div>');
+}
+
+/* ==================== modals ==================== */
+let modalReturn=null;
+function showModal(html){ $('sheet').innerHTML=html; $('overlay').classList.add('on'); }
+function hideModal(){ $('overlay').classList.remove('on'); }
+window.hideModal=hideModal;
+window.startGame=startGame;
+
+/* 主题选择：图集文件缺失的主题自动隐去，不报错也不占位 */
+function themeRowHTML(){
+  return THEME_ORDER.map(k=>{
+    const t=THEMES[k], ok=themeAvailable(k);
+    return '<button class="tbtn'+(S.theme===k?' sel':'')+(ok?'':' miss')+'" data-t="'+k+'"'+
+      (ok?'':' disabled')+'>'+t.name+'<small>'+(ok?themeSub(k):'图集文件缺失 · 需与 HTML 同目录')+'</small></button>';
+  }).join('');
+}
+/* 图集张数少于棋盘容量时的提醒（同图复用不影响判定，但先说清楚） */
+function themeHintText(){
+  const pk=themePack(S.theme); if(!pk) return '';
+  const M=CONFIG.modes[S.mode];
+  const cap=(M.cols/2)*(M.rows/2);
+  if(cap<=pk.photos.length) return '';
+  return '图集共 '+pk.photos.length+' 张，'+M.name+'模式要同时排 '+cap+' 张 —— 盘面会有 '+
+    (cap-pk.photos.length)+' 张重复照片。它们各自都能拼成一块消除，判定照样成立。';
+}
+function renderThemeHint(){
+  const el=$('themeHint'); if(!el) return;
+  el.textContent=themeHintText();
+  el.style.display = el.textContent ? '' : 'none';
+}
+/* 主题落地：换配色 + 顶栏标识 */
+function applyTheme(){
+  const t=THEMES[S.theme]||THEMES.classic;
+  document.body.dataset.theme=t.key;
+  $('logoTheme').textContent=t.name;
+  syncThemeChips();
+}
+function syncThemeChips(){
+  $('themeChips').innerHTML=THEME_ORDER.filter(k=>themeAvailable(k)).map(k=>{
+    const t=THEMES[k];
+    return '<button data-t="'+k+'"'+(S.theme===k?' class="on"':'')+'>'+t.short+'</button>';
+  }).join('');
+}
+
+function openMenu(){
+  S.phase='menu'; stopTimer();
+  const m=n=>CONFIG.modes[n];
+  const opts=['normal','hard'].map(k=>{
+    const c=m(k);
+    return '<div class="opt '+(S.mode===k?'sel':'')+'" data-m="'+k+'">'+
+      '<b>'+c.name+'模式</b><small>棋盘 '+c.cols+'×'+c.rows+' ＝ '+c.cols*c.rows+' 格<br>'+
+      '同时 '+(c.cols/2*c.rows/2)+' 张图 · 消 '+c.target+' 张通关<br>'+
+      (c.timeStart>0 ? '限时 '+fmtTime(c.timeStart)+' · 每消一张 +'+c.timeBonus+'s · '+c.lives+' 条命'
+                     : '不限时 · 无生命，纯休闲')+'</small></div>';
+  }).join('');
+  showModal('<h2>拼图消消乐</h2><p class="desc">每张图切成 2×2 四块散落在棋盘上。<br>'+
+    '把同一张图的四块拼成一块 <b>2×2 相邻区域</b>（放在棋盘哪个位置都行），该图就会<b>碎片飞散</b>并消掉，'+
+    '这两列下方的碎片<b>整体上移</b>；棋盘下方的<b>候补区</b>里叠着一排牌，牌面是这张待入盘图上<b>随机位置、随机大小的一小块局部</b>，'+
+    '认不出是什么图，剩下三块长什么样也得等它入盘才知道。开局所有碎片<b>全随机打散</b>，没有任何预置的「送分对」。</p>'+
+    '<div class="themerow" id="themeRow">'+themeRowHTML()+'</div>'+
+    '<div class="optgrid">'+opts+'</div>'+
+    '<div class="desc" id="themeHint" style="font-size:12px;margin:-4px 0 10px;display:none"></div>'+
+    '<div class="upzone" id="upzone">＋ 上传自己的图片（可多选）</div>'+
+    '<div class="btns"><button class="primary" id="goBtn">开始游戏</button>'+
+    '<button onclick="hideModal();showHelp()">玩法说明</button></div>');
+  const trow=$('sheet').querySelector('#themeRow');
+  trow.querySelectorAll('.tbtn').forEach(b=>{
+    if(b.disabled) return;
+    b.onclick=()=>{
+      if(S.theme===b.dataset.t) return;
+      trow.querySelectorAll('.tbtn').forEach(x=>x.classList.remove('sel'));
+      b.classList.add('sel');
+      S.theme=b.dataset.t; applyTheme(); Sfx.theme(); renderThemeHint();
+    };
+  });
+  const grid=$('sheet').querySelector('.optgrid');
+  grid.querySelectorAll('.opt').forEach(o=>{
+    o.onclick=()=>{ grid.querySelectorAll('.opt').forEach(x=>x.classList.remove('sel'));
+      o.classList.add('sel'); S.mode=o.dataset.m; renderThemeHint(); };
+  });
+  $('upzone').onclick=()=>$('fileInput').click();
+  $('goBtn').onclick=()=>{ startGame(S.mode); };
+  renderThemeHint();
+  syncChips();
+}
+window.openMenu=openMenu;
+
+function showHelp(){
+  const wasResolving = S.phase==='playing'||S.phase==='resolving';
+  if(wasResolving) S.phase='paused';
+  showModal('<h2>玩法说明</h2><p class="desc">'+
+    '<b>· 主题</b>：顶栏「主题」切换图库。<b>经典图库</b>是 34 幅世界名画（莫奈、梵高、伦勃朗、卡拉瓦乔、葛饰北斋…高清方形图，'+
+    '内嵌在 theme-classic.js，完全离线可玩）；<b>沅信引力</b>是本地 23 张合影图集，内嵌在 theme-yuanxin.js。<br>'+
+    '<b>· 棋盘</b>：普通 4×4＝16 格，同时排布 2×2＝4 张图；困难 6×8＝48 格，同时 12 张。每张图占一个 2×2 格位。<br>'+
+    '<b>· 操作</b>：点第一块选中，再点第二块交换；也可以按住直接拖到目标格。<br>'+
+    '<b>· 消除</b>：某张图的四块拼成一块 <b>2×2 相邻区域</b>、且各自象限正确时，整片飞散消失；'+
+    '这两列中位于空洞下方的碎片整体上移 2 格，底部空位由下方的候补区补一张。<b>拼在棋盘哪个位置都算数</b>，不限定固定的格位。<br>'+
+    '<b>· 候补区</b>：棋盘下方叠着一排牌，牌面是从这张待入盘图上<b>随机抠的一小块局部</b>（位置随机、大小约 30%~48%，放大铺满牌面），'+
+    '所以只看得到一点纹理细节，认不出是什么图。最左那张是「下一张」，它被抽进棋盘后其余的牌整体前移一位、末尾补一张新牌。<br>'+
+    '<b>· 计分</b>：每张 100 基础 + 时间奖励 + 少步奖励，12 秒内连续消除有 ×1.2 / ×1.5 / ×2 连击加成。<br>'+
+    '<b>· 时间</b>：两个模式都是全局倒计时 —— 普通 1:22、困难 2:45，每消除一张自动加时；'+
+    '计时归零扣 1 条命（各 3 条）并重新打乱，命用完即结束。<br>'+
+    '<b>· 通关</b>：普通消除 8 张、困难 16 张。<br>'+
+    '<b>· 彩蛋</b>：每局会在第 2~5 张之间随机挑一张，拼成时弹一个动图庆祝一下再消失（不影响操作、不暂停计时）。'+
+    '素材就是项目目录下的 fx-celebrate-1/2/3.gif，直接覆盖成自己的动图即可。</p>'+
+    '<div class="btns"><button class="primary" onclick="window.closeSheet()">知道了</button></div>');
+}
+window.showHelp=showHelp;
+window.closeSheet=function(){
+  hideModal();
+  if(S.phase==='paused'){ S.phase='playing'; S.lastFrame=performance.now(); }
+};
+$('overlay').addEventListener('click',e=>{
+  if(e.target.id==='overlay') window.closeSheet();
+});
+
+/* ==================== upload ==================== */
+$('fileInput').addEventListener('change',e=>{
+  const files=[...e.target.files||[]];
+  files.forEach(f=>{
+    const fr=new FileReader();
+    fr.onload=()=>{
+      const key='up'+(++uploadSeq);
+      uploadPool.push({ id:key, key, kind:'upload', url:fr.result, src:null, cvs:{}, thumb:null, steps:0 });
+      $('note').textContent='已加入 '+uploadPool.length+' 张自定义图片，后续入盘的图会用到';
+    };
+    fr.readAsDataURL(f);
+  });
+  e.target.value='';
+});
+
+/* ==================== ui wiring ==================== */
+$('themeChips').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  const k=b.dataset.t;
+  if(!themeAvailable(k) || S.theme===k) return;
+  S.theme=k; applyTheme(); Sfx.theme();
+  if(S.phase!=='menu') startGame(S.mode);
+});
+$('modeChips').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  if(S.mode===b.dataset.m && S.phase!=='menu') return;
+  S.mode=b.dataset.m; syncChips();
+  if(S.phase!=='menu') startGame(S.mode);
+});
+function syncChips(){
+  $('modeChips').querySelectorAll('button').forEach(b=>
+    b.classList.toggle('on', b.dataset.m===S.mode));
+}
+$('btnMute').onclick=()=>{ const on=Sfx.toggle(); $('btnMute').textContent = on?'🔊 音效':'🔇 静音'; };
+$('btnHelp').onclick=()=>showHelp();
+$('btnRestart').onclick=()=>{ openMenu(); };
+$('btnHint').onclick=()=>useHint();
+$('btnShuffle').onclick=()=>{
+  if(S.phase!=='playing') return;
+  S.score=Math.max(0,S.score-CONFIG.SHUFFLE_COST);
+  reshuffleAll(); updateHud();
+};
+$('btnUpload').onclick=()=>$('fileInput').click();
+/* 转屏 / 改窗口大小：重算格子边长 + 重排候补牌，加 120ms 防抖（转屏瞬间会连发好几次） */
+let resizeTimer=null;
+window.addEventListener('resize',()=>{
+  clearTimeout(resizeTimer);
+  resizeTimer=setTimeout(()=>{ if(S.pieces.length){ layoutBoard(); renderQueue(); } },120);
+});
+window.addEventListener('orientationchange',()=>{
+  clearTimeout(resizeTimer);
+  resizeTimer=setTimeout(()=>{ if(S.pieces.length){ layoutBoard(); renderQueue(); } },260);
+});
+window.addEventListener('keydown',e=>{
+  if(e.key==='h'||e.key==='H') useHint();
+  if(e.key==='m'||e.key==='M') $('btnMute').click();
+  if(e.key==='Escape') clearHint();
+});
+
+/* ==================== test hooks ==================== */
+window.__game=S; window.__swap=doSwap; window.__start=startGame; window.__resolve=tryResolve;
+/* 内置自动解法（仅自测用：地址栏加 #autosolve 触发） */
+function autoSolveStep(){
+  if(S.phase!=='playing'){ setTimeout(autoSolveStep,420); return; }
+  if(!S.pieces.length){ setTimeout(autoSolveStep,420); return; }
+  const best=bestProgress();
+  if(best && best.cnt<4 && best.missing.length){
+    const pick=planHook(best);
+    if(pick){ doSwap(pick.src.cell, pick.m.cell); setTimeout(autoSolveStep,400); return; }
+  }
+  setTimeout(autoSolveStep,600);
+}
+
+/* ==================== boot ==================== */
+S.M=CONFIG.modes[S.mode];
+S.lives=S.M.lives;
+if(!themeAvailable(S.theme)) S.theme='classic';
+applyTheme();
+updateHud();
+openMenu();
+</script>
+</body>
+</html>
