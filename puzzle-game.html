@@ -1532,7 +1532,7 @@ function resolveBlock(br, bc){
   const run=S.run;
   gameLater(async()=>{
     if(S.cleared>=S.M.target){ winGame(); return; }
-    await collapseColumns(bc,br);
+    await refillPicture(ids);
     if(run!==S.run) return;
     markCorrect(); updateHud();
     gameLater(()=>{
@@ -1543,19 +1543,44 @@ function resolveBlock(br, bc){
   }, delay+30);
 }
 
-/* 消除后：这两列中「位于空洞下方」的碎片整体上移 2 格，最底部由待入盘队列补一张新图 */
-function collapseColumns(bc, br){
-  for(const cc of [bc, bc+1]){
-    for(let row=br+2; row<S.rows; row++){
-      const src=row*S.cols+cc, dst=src-2*S.cols;
-      const p=S.occ[src];
-      S.occ[src]=null;
-      if(p) place(p,dst,true);
+function correctSeam(a,b,vertical){
+  return !!a && !!b && samePic(a.pic,b.pic) &&
+    (vertical ? a.q<2 && b.q===a.q+2 : a.q%2===0 && b.q===a.q+1);
+}
+
+function refillCells(holes){
+  if(S.mode==='tutorial') return holes.slice();
+  const regions=[[],[],[],[]],degree=new Array(S.ncells).fill(0),seams=new Set();
+  for(let i=0;i<S.ncells;i++){
+    const row=Math.floor(i/S.cols),col=i%S.cols;
+    regions[(row>=S.rows/2?2:0)+(col>=S.cols/2?1:0)].push(i);
+    for(const next of [col+1<S.cols?i+1:-1,row+1<S.rows?i+S.cols:-1]){
+      if(next<0 || !correctSeam(S.occ[i],S.occ[next],next===i+S.cols)) continue;
+      degree[i]++; degree[next]++; seams.add(i+':'+next);
     }
   }
-  const spawned=spawnPictureAt(bc,S.rows-2);
-  Sfx.drop();
-  return spawned;
+
+  // One fragment per region, with enough separation to prevent another local 2x2 refill.
+  // Rank layouts by broken seams first, then by the number of displaced pieces.
+  let best=null,bestCost=Infinity,ties=0;
+  for(const a of regions[0]) for(const b of regions[1])
+    for(const c of regions[2]) for(const d of regions[3]){
+      const cells=[a,b,c,d];
+      const moved=cells.filter(i=>S.occ[i]).length;
+      if(moved===4) continue;
+      const rows=cells.map(i=>Math.floor(i/S.cols)),cols=cells.map(i=>i%S.cols);
+      if(Math.max(...rows)-Math.min(...rows)<S.rows/2 ||
+         Math.max(...cols)-Math.min(...cols)<S.cols/2) continue;
+      let broken=cells.reduce((sum,i)=>sum+degree[i],0);
+      for(let i=0;i<4;i++) for(let j=i+1;j<4;j++){
+        const lo=Math.min(cells[i],cells[j]),hi=Math.max(cells[i],cells[j]);
+        if(seams.has(lo+':'+hi)) broken--;
+      }
+      const cost=broken*10+moved;
+      if(cost<bestCost){bestCost=cost;best=cells;ties=1;}
+      else if(cost===bestCost && Math.random()<1/++ties) best=cells;
+    }
+  return best || holes.slice();
 }
 /* 从待入盘队列取一张：优先取「盘面上还没有」的照片。
    队列里可能有「盘上已经出现过的照片」（图集有限、走到后期必然重复），
@@ -1573,8 +1598,7 @@ function takeFromQueue(){
   }
   return S.queue.shift();
 }
-/* 把一张新图的四块碎片（象限打乱）放进底部 2×2 相邻格，逐块 3D 翻面入场 */
-function spawnPictureAt(bc, r0){
+function refillPicture(holes){
   const pic = takeFromQueue();
   const run=S.run;
   /* 先补齐队列并立刻重画候补区：首张牌当场飞入棋盘、其余整体前移、末尾滑进一张新牌。
@@ -1584,7 +1608,11 @@ function spawnPictureAt(bc, r0){
   return ensureSrc(pic).then(()=>{
     if(run!==S.run) return;
     pic.steps=0;
-    const cells=blockCells(r0,bc);
+    const cells=refillCells(holes);
+    const destinations=shuffle(holes.filter(i=>!cells.includes(i)));
+    const displaced=cells.filter(i=>S.occ[i]).map(i=>S.occ[i]);
+    cells.forEach(i=>{S.occ[i]=null;});
+    displaced.forEach((piece,i)=>place(piece,destinations[i],true));
     let order=shuffle([0,1,2,3]), guard=0;
     while(guard++<20 && order.every((q,k)=>q===k)) order=shuffle([0,1,2,3]);
     order.forEach((q,k)=>{
@@ -1597,6 +1625,7 @@ function spawnPictureAt(bc, r0){
         {transform:'translateY(0) perspective(760px) rotateY(0deg) scale(1)',opacity:1}
       ],{duration:motionEnabled()?480:1,delay:motionEnabled()?k*70:0,easing:'cubic-bezier(.2,.85,.3,1)'});
     });
+    Sfx.drop();
     markCorrect();
   });
 }
@@ -2026,7 +2055,7 @@ function showHelp(){
   showModal('<h2>玩法说明</h2><p class="desc">'+
     '<b>拼合</b>：交换或拖动碎片，把同图四块按原图方向排成相邻 2×2；棋盘任意位置都算。<br><br>'+
     '<b>接缝</b>：正确相邻的碎片会亮起绿色描边，三块就位时亮度更高。<br><br>'+
-    '<b>补牌与区域</b>：完成后两列下方碎片上移，底部补入新图；在指定区域完成额外 +75 分，限时模式另加 4 秒。<br><br>'+
+    '<b>补牌与区域</b>：新图四块分散进入四个区域，原有碎片优先保留正确接缝；需要腾位置的碎片移入消除空位。教学就地补牌。在指定区域完成额外 +75 分，限时模式另加 4 秒。<br><br>'+
     '<b>连击</b>：第一张 ×1，12 秒内连续完成依次 ×1.2、×1.5、×2。暂停和消除动画不占连击时间。<br><br>'+
     '<b>工具</b>：灯泡提示下一步，弯箭头撤销尚未消除的最后一次交换。放大镜可查看碎片，按住碎片也能放大。<br><br>'+
     '<b>模式</b>：教学和休闲不限时；普通 82 秒、困难 165 秒，每完成一张分别加 12 / 20 秒。时间到扣一条命并重新打乱。<br><br>'+

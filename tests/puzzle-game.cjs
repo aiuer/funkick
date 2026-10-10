@@ -27,12 +27,73 @@ async function completeAt(page, row, col) {
       if (piece.cell !== cells[q]) __swap(piece.cell, cells[q]);
     }
     const state = { cleared: __game.cleared, score: __game.score,
-      expected: scoreFor(pic).gain + (regionAt(row, col) === __game.regionTarget ? CONFIG.REGION_SCORE : 0) };
+      expected: scoreFor(pic).gain + (regionAt(row, col) === __game.regionTarget ? CONFIG.REGION_SCORE : 0),
+      survivors:__game.occ.map((p,cell)=>p && !cells.includes(cell)?
+        {id:p.testId||(p.testId=String(Math.random())),cell}:null).filter(Boolean),
+      mode:__game.mode };
     __resolve();
     return state;
   }, { row, col });
   await page.waitForFunction(n => __game.cleared > n && ['playing', 'over'].includes(__game.phase), before.cleared);
+  if(before.mode!=='tutorial' && await page.evaluate(()=>__game.phase!=='over')){
+    const refill=await page.evaluate(survivors=>{
+      const oldIds=new Set(survivors.map(p=>p.id));
+      const incoming=__game.pieces.filter(p=>!oldIds.has(p.testId));
+      const cells=incoming.map(p=>p.cell);
+      return {
+        count:incoming.length,
+        pictures:new Set(incoming.map(p=>p.pic.key)).size,
+        regions:new Set(cells.map(i=>(Math.floor(i/__game.cols)>=__game.rows/2?2:0)+(i%__game.cols>=__game.cols/2?1:0))).size,
+        rowSpan:Math.max(...cells.map(i=>Math.floor(i/__game.cols)))-Math.min(...cells.map(i=>Math.floor(i/__game.cols))),
+        colSpan:Math.max(...cells.map(i=>i%__game.cols))-Math.min(...cells.map(i=>i%__game.cols)),
+        rows:__game.rows,cols:__game.cols,
+        moved:survivors.filter(old=>__game.pieces.find(p=>p.testId===old.id)?.cell!==old.cell).length,
+        occupied:__game.occ.filter(Boolean).length,
+        consistent:__game.pieces.every(p=>__game.occ[p.cell]===p) &&
+          new Set(__game.occ).size===__game.ncells
+      };
+    },before.survivors);
+    assert.equal(refill.count,4);
+    assert.equal(refill.pictures,1);
+    assert.equal(refill.regions,4);
+    assert.ok(refill.rowSpan>=refill.rows/2);
+    assert.ok(refill.colSpan>=refill.cols/2);
+    assert.ok(refill.moved<=3);
+    assert.equal(refill.occupied,refill.rows*refill.cols);
+    assert.equal(refill.consistent,true);
+  }
   return before;
+}
+
+async function verifyProtectedRefill(page){
+  const result=await page.evaluate(()=>{
+    const previous=__game.occ;
+    const holes=[8,9,12,13];
+    const fixture=Array.from({length:16},(_,i)=>({pic:{key:'solo'+i},q:0,cell:i}));
+    const pic={key:'protected'};
+    [0,1,4].forEach((cell,q)=>{fixture[cell]={pic,q,cell};});
+    holes.forEach(i=>{fixture[i]=null;});
+    __game.occ=fixture;
+    let protectedAll=true;
+    for(let i=0;i<40;i++){
+      const targets=refillCells(holes);
+      if(targets.some(cell=>[0,1,4].includes(cell))) protectedAll=false;
+    }
+    // Every surviving fragment now belongs to a correct horizontal pair.
+    for(let row=0;row<4;row++) for(let col=0;col<4;col+=2){
+      const pair={key:'pair'+row+col};
+      for(let q=0;q<2;q++){
+        const cell=row*4+col+q;
+        if(fixture[cell]) fixture[cell]={pic:pair,q,cell};
+      }
+    }
+    const targets=refillCells(holes);
+    const broken=new Set(targets.filter(cell=>fixture[cell]).map(cell=>fixture[cell].pic.key)).size;
+    __game.occ=previous;
+    return {protectedAll,broken};
+  });
+  assert.equal(result.protectedAll,true);
+  assert.equal(result.broken,3);
 }
 
 (async () => {
@@ -64,6 +125,7 @@ async function completeAt(page, row, col) {
     assert.equal(await page.locator('#livesCard').isVisible(), false);
 
     await page.evaluate(() => __start('normal'));
+    await verifyProtectedRefill(page);
     const original = await page.evaluate(() => __game.occ.map(p => p.pic.key + ':' + p.q));
     await page.evaluate(() => { __swap(0, 1); undoSwap(); });
     assert.deepEqual(await page.evaluate(() => __game.occ.map(p => p.pic.key + ':' + p.q)), original);
@@ -80,6 +142,7 @@ async function completeAt(page, row, col) {
 
     await page.evaluate(() => __start('normal'));
     const first = await completeAt(page, 0, 0);
+    await capture(page,'mobile-after-refill');
     assert.equal(await page.evaluate(() => __game.score), first.expected);
     assert.equal(await page.evaluate(() => __game.regionWins), 1);
     assert.equal(await page.evaluate(() => __game.regionTarget), 1);
@@ -199,7 +262,7 @@ async function completeAt(page, row, col) {
     assert.equal(await page.locator('#fxpop').isVisible(),false);
     await page.getByRole('button',{name:'继续游戏',exact:true}).click();
     assert.deepEqual(errors, []);
-    console.log('PASS: both themes, complete games, scoring, regions, combo, undo, pause, gallery, achievements, storage, uploads, timeout, restart during animations, GIF assets, responsive layout and canvas rendering.');
+    console.log('PASS: dispersed refill, protected seams, minimal disruption, both themes, complete games, scoring, regions, combo, undo, pause, gallery, achievements, storage, uploads, timeout, restart during animations, GIF assets, responsive layout and canvas rendering.');
     console.log('Screenshots:', output);
   } finally {
     await browser.close();
