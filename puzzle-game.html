@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- user-scalable=no：拖拽碎片时双指/双击缩放会误触发，直接关掉；viewport-fit=cover 适配刘海屏 -->
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#080c18">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -152,7 +152,7 @@ body{min-height:100vh;min-height:100dvh;display:flex;justify-content:center;
 .sheet td:last-child{text-align:right;color:var(--txt);font-variant-numeric:tabular-nums}
 .sheet .btns button{margin-top:12px}
 .optgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px}
-.opt{border:1px solid var(--line);background:var(--panel2);border-radius:12px;padding:12px;cursor:pointer;text-align:left;transition:.15s}
+.opt{border:1px solid var(--line);background:var(--panel2);color:var(--txt);border-radius:8px;padding:12px;cursor:pointer;text-align:left;transition:.15s}
 .opt:hover{border-color:var(--acc)}
 .opt.sel{border-color:var(--acc);background:rgba(79,140,255,.12)}
 .opt b{font-size:14px;display:block;margin-bottom:3px}
@@ -285,6 +285,114 @@ body[data-theme="yuanxin"] .tbtn.sel{background:rgba(232,101,154,.15)}
   .qrow{flex-direction:row;align-items:center;gap:10px}
   .qlab{text-align:right}
 }
+
+/* Game feedback and controls stay next to the board on every screen. */
+button{font-family:inherit}
+button:focus-visible,.pc:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+button:disabled{opacity:.38;cursor:default}
+.playbar{display:flex;align-items:center;justify-content:center;gap:8px;width:100%}
+.hud.untimed{grid-template-columns:repeat(3,minmax(0,1fr))}
+.queue{isolation:isolate}
+.toolbtn{position:relative;display:inline-flex;align-items:center;justify-content:center;
+  width:44px;height:44px;padding:0;border:1px solid var(--line);border-radius:8px;
+  background:var(--panel2);color:var(--txt);cursor:pointer;flex-shrink:0}
+.toolbtn svg,.iconbtn svg{width:19px;height:19px;flex-shrink:0}
+.toolbtn:hover:not(:disabled){border-color:var(--acc)}
+.toolbtn::after{content:attr(aria-label);position:absolute;bottom:calc(100% + 6px);left:50%;
+  transform:translateX(-50%);white-space:nowrap;background:var(--panel2);border:1px solid var(--line);
+  color:var(--txt);padding:5px 8px;border-radius:4px;font-size:11px;pointer-events:none;opacity:0;z-index:70}
+.toolbtn:hover::after,.toolbtn:focus-visible::after{opacity:1}
+.toolbtn.active{color:var(--gold);border-color:var(--gold)}
+.iconbtn{display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.gear{display:none}
+.challenge{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;
+  min-height:32px;font-size:12px;color:var(--sub);padding:0 3px}
+.challenge b{color:var(--gold);font-weight:500}
+.challenge small{font-variant-numeric:tabular-nums;color:var(--dim);white-space:nowrap}
+.region-goal{position:absolute;pointer-events:none;border:1px dashed rgba(255,209,102,.45);
+  border-radius:5px;z-index:3}
+.pc.linked::after{border-color:rgba(55,201,143,.65);border-width:2px}
+.pc.near::after{border-color:var(--ok);box-shadow:0 0 12px rgba(55,201,143,.3)}
+.pc.sel::after{border-color:var(--gold);border-width:3px}
+.pc.hintcell::after{border-color:var(--gold);border-style:dashed}
+.complete-preview{position:absolute;z-index:35;pointer-events:none;border:2px solid var(--ok);
+  border-radius:6px;box-shadow:0 0 22px rgba(55,201,143,.4);object-fit:cover;animation:pop .18s ease-out}
+.combo-track{height:3px;background:var(--panel2);margin-top:4px;overflow:hidden;border-radius:2px}
+.combo-track i{display:block;height:100%;background:var(--gold);width:0}
+.toggleline{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--sub);margin:9px 0}
+.toggleline input{accent-color:var(--acc);width:16px;height:16px}
+.galleryhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
+.galleryhead h3{margin:0}
+.galleryhead button{background:none;border:0;color:var(--acc);font-size:12px;cursor:pointer;padding:4px}
+.collectiontabs{display:flex;gap:6px;margin:12px 0}
+.collectiontabs button{flex:1;padding:8px;border:1px solid var(--line);border-radius:6px;
+  background:var(--panel2);color:var(--sub);cursor:pointer}
+.collectiontabs button.on{border-color:var(--acc);color:var(--txt)}
+.albumgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.albumitem{min-width:0;border:0;background:none;color:var(--sub);padding:0;text-align:left;cursor:pointer}
+.albumitem img,.albumlock{display:block;width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px}
+.albumlock{display:flex;align-items:center;justify-content:center;background:var(--panel2);color:var(--dim)}
+.albumitem small{display:block;margin-top:5px;font-size:11px;overflow-wrap:anywhere;line-height:1.4}
+.albumitem:disabled{opacity:1;cursor:default}
+.achievement{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.achievement svg{width:24px;height:24px;color:var(--dim);flex-shrink:0}
+.achievement.unlocked svg{color:var(--gold)}
+.achievement b{display:block;font-size:13px}
+.achievement small{display:block;color:var(--sub);font-size:12px;margin-top:3px}
+.personalbest{font-size:12px;color:var(--sub);margin:8px 0}
+.statusline{font-size:12px;color:var(--ok);min-height:18px;margin:6px 0}
+.statusline:empty{display:none}
+#toast{position:fixed;bottom:max(20px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);
+  z-index:150;background:var(--panel2);border:1px solid var(--ok);border-radius:8px;padding:10px 15px;
+  max-width:calc(100% - 24px);font-size:13px;box-shadow:0 6px 22px rgba(0,0,0,.4);pointer-events:none;display:none}
+#toast.on{display:block}
+#fxpop{inset:auto 14px max(14px,env(safe-area-inset-bottom)) auto;padding:0;justify-content:flex-end}
+#fximg{width:110px;border-radius:8px}
+.fxcap{font-size:11px;padding:4px 8px;letter-spacing:0}
+.fxbox{gap:4px}
+.optgrid{grid-template-columns:1fr 1fr}
+.sheet{border-radius:8px}
+.sheet .desc{overflow-wrap:anywhere}
+#overlay{position:fixed}
+@media(max-width:620px){
+  .gear{display:inline-flex}
+  .top{gap:6px;justify-content:space-between}
+  .top .logo{flex:1}
+  .top .chipgroup:has(#modeChips){order:5;flex:1 1 100%}
+  #modeChips{width:100%}
+  #modeChips button{flex:1;min-height:32px}
+  .playbar{gap:7px}
+  .challenge{font-size:11px;min-height:28px}
+  .leftcol{gap:6px}
+  .qrow{flex-direction:row;align-items:center;gap:10px}
+  .stage{gap:14px}
+  .albumgrid{gap:8px}
+  .opt{padding:10px}
+  #fximg{width:86px}
+}
+@media(max-height:560px) and (orientation:landscape){
+  body{padding-top:6px;padding-bottom:6px}
+  .top{flex-wrap:nowrap;gap:6px;margin-bottom:6px}
+  .top .chipgroup:has(#modeChips){order:initial;flex:0 1 auto}
+  .logo em,.chiplab{display:none}
+  .top .grow{display:none}
+  .logo{font-size:14px;margin-right:auto;white-space:nowrap}
+  .tools{gap:6px}
+  .modechips button{font-size:11px;padding:5px 8px}
+  .iconbtn{font-size:11px;padding:5px 8px}
+  .stage{gap:8px}
+  .leftcol{display:grid;grid-template-columns:max-content 210px;justify-content:center;gap:4px 12px;align-items:start}
+  .challenge{grid-column:1 / -1;min-height:24px}
+  .boardwrap{grid-column:1;grid-row:2 / span 3;justify-self:end;padding:5px}
+  .playbar{grid-column:2;grid-row:2;display:grid;grid-template-columns:repeat(3,44px);justify-content:start;gap:6px}
+  .statusline{grid-column:2;grid-row:3;margin:0;font-size:11px;line-height:1.5}
+  .qrow{grid-column:2;grid-row:4;flex-direction:column;align-items:flex-start;gap:3px}
+  .qlab{text-align:left}
+  .qlab small{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+}
 </style>
 </head>
 <body>
@@ -299,16 +407,18 @@ body[data-theme="yuanxin"] .tbtn.sel{background:rgba(232,101,154,.15)}
     <div class="chipgroup">
       <span class="chiplab">模式</span>
       <div class="modechips" id="modeChips">
+        <button data-m="tutorial">教学</button>
+        <button data-m="relax">休闲</button>
         <button data-m="normal" class="on">普通</button>
         <button data-m="hard">困难</button>
       </div>
     </div>
     <div class="tools" id="tools">
-      <button class="iconbtn" id="btnMute">🔊 音效</button>
+      <button class="iconbtn" id="btnMute"><i data-lucide="volume-2"></i><span>音效</span></button>
       <button class="iconbtn" id="btnHelp">玩法</button>
       <button class="iconbtn" id="btnRestart">重开</button>
     </div>
-    <button class="iconbtn gear" id="btnTools" aria-label="设置">⚙</button>
+    <button class="iconbtn gear" id="btnTools" aria-label="设置"><i data-lucide="settings"></i></button>
   </div>
 
   <div class="hud" id="hud">
@@ -316,12 +426,22 @@ body[data-theme="yuanxin"] .tbtn.sel{background:rgba(232,101,154,.15)}
     <div class="card"><div class="k">已消除</div><div class="v" id="vClear">0 / 10</div></div>
     <div class="card" id="timeCard"><div class="k">剩余时间</div><div class="v" id="vTime">2:00</div></div>
     <div class="card" id="livesCard"><div class="k">生命</div><div class="v" id="vLives">♥♥♥</div></div>
-    <div class="card"><div class="k">连击</div><div class="v" id="vCombo">×1.0</div></div>
+    <div class="card"><div class="k">连击</div><div class="v" id="vCombo">×1.0</div><div class="combo-track"><i id="comboBar"></i></div></div>
   </div>
 
   <div class="stage">
     <div class="leftcol">
-      <div class="boardwrap"><div id="board"></div></div>
+      <div class="challenge" id="challenge"><span id="challengeText"></span><small id="challengeCount"></small></div>
+      <div class="boardwrap"><div id="board" role="group" aria-label="拼图棋盘"></div></div>
+      <div class="playbar" aria-label="棋盘工具">
+        <button class="toolbtn" id="btnHint" aria-label="提示" title="提示"><i data-lucide="lightbulb"></i></button>
+        <button class="toolbtn" id="btnUndo" aria-label="撤销交换" title="撤销交换"><i data-lucide="undo-2"></i></button>
+        <button class="toolbtn" id="btnPause" aria-label="暂停" title="暂停"><i data-lucide="pause"></i></button>
+        <button class="toolbtn" id="btnInspect" aria-label="放大查看" title="放大查看"><i data-lucide="zoom-in"></i></button>
+        <button class="toolbtn" id="btnShuffle" aria-label="重排" title="重排"><i data-lucide="shuffle"></i></button>
+        <button class="toolbtn" id="btnUpload" aria-label="上传图片" title="上传图片"><i data-lucide="image-plus"></i></button>
+      </div>
+      <div class="statusline" id="gameStatus" role="status" aria-live="polite"></div>
       <div class="qrow">
         <div class="qlab">候补区<small id="vQueue2">4 张</small></div>
         <div class="queue" id="queue"></div>
@@ -331,7 +451,7 @@ body[data-theme="yuanxin"] .tbtn.sel{background:rgba(232,101,154,.15)}
     </div>
     <div class="side">
       <div class="box">
-        <h3>完成画廊</h3>
+        <div class="galleryhead"><h3>本局画廊</h3><button id="btnCollection">收藏与成就</button></div>
         <div class="gall" id="gall"></div>
         <div class="bar"><i id="progBar"></i></div>
       </div>
@@ -342,14 +462,7 @@ body[data-theme="yuanxin"] .tbtn.sel{background:rgba(232,101,154,.15)}
         <div class="statline"><span>待入盘</span><b id="vQueue">4 张</b></div>
         <div class="statline"><span>通关目标</span><b id="vTarget">10 张</b></div>
       </div>
-      <div class="box">
-        <h3>操作</h3>
-        <div class="btns">
-          <button id="btnHint">提示</button>
-          <button id="btnShuffle">重排</button>
-          <button class="primary" id="btnUpload">上传图片</button>
-        </div>
-      </div>
+      <div class="personalbest" id="personalBest"></div>
     </div>
   </div>
 </div>
@@ -358,6 +471,7 @@ body[data-theme="yuanxin"] .tbtn.sel{background:rgba(232,101,154,.15)}
 <!-- 彩蛋动图：第 2~5 张消除时随机弹一次，播完自动消失。pointer-events:none，不吃操作 -->
 <div id="fxpop"><div class="fxbox"><img id="fximg" alt=""><div class="fxcap" id="fxcap">拼成啦！</div></div></div>
 <input type="file" id="fileInput" accept="image/*" multiple style="display:none">
+<div id="toast" role="status" aria-live="polite"></div>
 
 <!-- 主题图集：都内嵌为 data URL。文件缺失时自动降级，不影响游戏本身
      · theme-classic.js —— 34 幅世界名画（CC0，从克利夫兰艺术博物馆开放接口抓取）
@@ -365,6 +479,7 @@ body[data-theme="yuanxin"] .tbtn.sel{background:rgba(232,101,154,.15)}
      · theme-yuanxin.js —— 23 张本地双人合影，缺了则隐藏该主题 -->
 <script src="theme-classic.js"></script>
 <script src="theme-yuanxin.js"></script>
+<script src="lucide.min.js"></script>
 
 <script>
 "use strict";
@@ -381,6 +496,8 @@ const CONFIG = {
   STEP_BONUS: 10,
   TIMEOUT_PENALTY: 40,
   SHUFFLE_COST: 20,
+  REGION_SCORE: 75,
+  REGION_TIME: 4,
   /* 开局给每张图预置几块「已经正确相邻」的碎片当落脚点：
      2 = 成对（一眼能认出这 2 块属于同一张图）
      1 = 单块
@@ -412,6 +529,12 @@ const CONFIG = {
     }
   },
   modes: {
+    tutorial: { name:'教学', cols:4, rows:2, maxCell:118, minCell:40, gap:6, gapNarrow:4,
+                target:2, timeStart:0, timeBonus:0, lives:0, timeScoreMax:0,
+                hintCost:0, plant:2, goalSteps:8 },
+    relax: { name:'休闲', cols:4, rows:4, maxCell:118, minCell:40, gap:6, gapNarrow:4,
+             target:8, timeStart:0, timeBonus:0, lives:0, timeScoreMax:0,
+             hintCost:0, plant:0, goalSteps:8 },
     /* 普通：4×4＝16 格，同时排 4 张，消 8 张通关，限时 1:22（82 秒）
        plant:0 = 开局碎片全随机（用户要求「牌面全部随机」，不给任何预置的正确相邻块） */
     normal: { name:'普通', cols:4, rows:4, maxCell:118, minCell:40, gap:6, gapNarrow:4,
@@ -430,6 +553,46 @@ const boardEl = $('board');
 const rnd = (a,b) => a + Math.random()*(b-a);
 const clamp = (v,a,b) => v<a?a:v>b?b:v;
 function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const t=a[i];a[i]=a[j];a[j]=t; } return a; }
+function escapeHTML(value){ return String(value||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function refreshIcons(){ if(window.lucide) lucide.createIcons(); }
+
+const SAVE_KEY='funkick-progress-v1';
+function loadProgress(){
+  try{
+    const data=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');
+    if(data && data.version===1){
+      const object=v=>v && typeof v==='object' && !Array.isArray(v) ? v : {};
+      return {version:1,collection:object(data.collection),best:object(data.best),
+        achievements:object(data.achievements),preferences:object(data.preferences)};
+    }
+  }catch(e){}
+  return {version:1,collection:{},best:{},achievements:{},preferences:{links:true,motion:true}};
+}
+const progress=loadProgress();
+let toastTimer=null;
+function toast(text){
+  $('toast').textContent=text; $('toast').classList.add('on');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>$('toast').classList.remove('on'),3000);
+}
+function saveProgress(){
+  try{ localStorage.setItem(SAVE_KEY,JSON.stringify(progress)); }
+  catch(e){ $('gameStatus').textContent='收藏暂存于当前页面'; }
+}
+const ACHIEVEMENTS={
+  first:{name:'第一块拼图',desc:'首次完成一张图片'},
+  clean:{name:'独立完成',desc:'普通或困难模式无提示、无重排通关'},
+  explorer:{name:'全盘探索',desc:'一局内在四个区域分别完成图片'},
+  combo:{name:'心流时刻',desc:'连续完成四张图片，达到 ×2 连击'},
+  collector:{name:'小小收藏家',desc:'解锁 10 张不同的主题图片'},
+  tutorial:{name:'准备好了',desc:'完成教学练习'},
+  yuanxin:{name:'引力相册',desc:'集齐 23 张沅信引力图片'}
+};
+function unlockAchievement(key){
+  if(progress.achievements[key]) return;
+  progress.achievements[key]=Date.now(); saveProgress();
+  toast('成就解锁 · '+ACHIEVEMENTS[key].name);
+}
+function motionEnabled(){ return progress.preferences.motion!==false && !matchMedia('(prefers-reduced-motion: reduce)').matches; }
 
 /* ==================== SFX ==================== */
 const Sfx = (() => {
@@ -531,7 +694,8 @@ function makePic(){
     /* key = 照片身份：同一张照片可能以多个 pic 实例同时出现（图集被反复取用），
        判定一律比 key，不能比对象引用 */
     const key = theme + ':' + ph.id;
-    return { id:key, key, pid:key, kind:'pack', url:ph.data, src:null, cvs:{}, thumb:null, steps:0 };
+    return { id:key, key, pid:key, kind:'pack', title:ph.title||('合影 '+ph.id.slice(2)),
+      artist:ph.artist||'', theme, url:ph.data, src:null, cvs:{}, thumb:null, steps:0 };
   }
   const pid = 'p' + nextPhotoId();
   return { id:pid, key:pid, pid, kind:'remote', url:null, src:null, cvs:{}, thumb:null, steps:0 };
@@ -661,8 +825,62 @@ const S = {
   timeLeft:0, lastTickSec:99,
   fxAt:null,        // 本局彩蛋落在「第几张消除」，startGame 时随机定；触发后置 null
   pics:[],  gallery:[], hint:{el:null,tel:null,box:null}, sel:-1,
-  timer:null, lastFrame:0
+  timer:null, lastFrame:0,
+  run:0, paused:false, undo:null, pendingSwap:null, inspect:false, comboRemaining:0,
+  regionTarget:0, regionWins:0, regions:new Set(), hintsUsed:0, shufflesUsed:0,
+  elapsed:0, tutorialSwaps:0
 };
+
+const gameTimers=new Set(), pauseReasons=new Set();
+function gameLater(fn,ms){
+  const run=S.run;
+  const id=setTimeout(()=>{ gameTimers.delete(id); if(run===S.run) fn(); },ms);
+  gameTimers.add(id); return id;
+}
+function canPlay(){ return S.phase==='playing' && !S.paused && !document.hidden; }
+function pauseGame(reason){
+  if(!['playing','resolving'].includes(S.phase)) return;
+  cancelDrag();
+  pauseReasons.add(reason); S.paused=true; updateControls();
+}
+function resumeGame(reason){
+  pauseReasons.delete(reason);
+  if(pauseReasons.size) return;
+  S.paused=false; S.lastFrame=performance.now(); updateControls();
+  if(canPlay()) gameLater(tryResolve,0);
+}
+function updateControls(){
+  const playable=canPlay();
+  ['btnHint','btnShuffle','btnInspect','btnUpload'].forEach(id=>$(id).disabled=!playable);
+  $('btnUndo').disabled=!playable||!S.undo;
+  $('btnPause').disabled=!['playing','resolving'].includes(S.phase);
+  $('btnInspect').classList.toggle('active',S.inspect);
+  $('btnHint').setAttribute('aria-label','提示'+(S.M.hintCost?' · −'+S.M.hintCost+' 分':''));
+  $('btnShuffle').setAttribute('aria-label','重排 · −'+CONFIG.SHUFFLE_COST+' 分');
+}
+
+const REGION_NAMES=['左上','右上','左下','右下'];
+function regionAt(row,col){ return (row+.5>=S.rows/2?2:0)+(col+.5>=S.cols/2?1:0); }
+function updateChallenge(){
+  boardEl.querySelectorAll('.region-goal').forEach(el=>el.remove());
+  if(S.mode==='tutorial'){
+    $('challengeText').textContent=S.cleared?'再完成一张，练习补牌后的拼合':'完成第一张拼图';
+    $('challengeCount').textContent='练习 '+S.cleared+' / 2'; return;
+  }
+  $('challengeText').innerHTML='区域奖励 · <b>'+REGION_NAMES[S.regionTarget]+' +'+CONFIG.REGION_SCORE+' 分</b>';
+  $('challengeCount').textContent='已达成 '+S.regionWins+' 次';
+  if(!S.pieces.length) return;
+  const goal=document.createElement('div'); goal.className='region-goal';
+  const halfW=(boardW()-S.gap)/2,halfH=(boardH()-S.gap)/2;
+  Object.assign(goal.style,{left:(S.regionTarget%2?(boardW()+S.gap)/2:0)+'px',
+    top:(S.regionTarget>=2?(boardH()+S.gap)/2:0)+'px',width:halfW+'px',height:halfH+'px'});
+  boardEl.appendChild(goal);
+}
+function updateTutorial(){
+  if(S.mode!=='tutorial') return;
+  $('gameStatus').textContent=S.cleared?'候补图片已入盘，再拼成一张完整图片':
+    S.tutorialSwaps?'绿色描边表示接缝正确，继续拼出完整的 2×2 图片':'点两块交换，或拖到目标格；绿色接缝属于同一张图';
+}
 
 let PX = 72;  // piece canvas pixel size (device aware)
 
@@ -683,16 +901,19 @@ function computeCell(){
   const availW=Math.min(Math.max(colW - padX - bdX - 2, 180), 520);
   const vh=(window.visualViewport && window.visualViewport.height) || window.innerHeight;
   const top=clamp(wrap.getBoundingClientRect().top + padY, 0, vh*0.45);   // 页面滚下去时按 0 算
-  let reserved=178;                                   // 候补区 + 底部提示行 + 边距
-  const qrow=document.querySelector('.qrow');
-  if(qrow){ const qh=qrow.getBoundingClientRect().height; if(qh>0) reserved=qh+24; }
-  /* 底部说明行：手机上被 display:none 收掉了，就不能再当它占着位 ——
-     用 offsetParent 判断是否真的在渲染（display:none 时为 null） */
-  const noteEl=$('note');
-  if(noteEl && noteEl.offsetParent!==null){
-    const nh=noteEl.getBoundingClientRect().height; if(nh>0) reserved += nh+8;
+  let reserved=padY/2+16;
+  const landscape=matchMedia('(max-height:560px) and (orientation:landscape)').matches;
+  const colStyle=getComputedStyle(col),colGap=parseFloat(colStyle.rowGap)||0;
+  let sibling=wrap.nextElementSibling;
+  while(sibling){
+    if(!landscape && sibling.offsetParent!==null){
+      const style=getComputedStyle(sibling);
+      reserved+=sibling.getBoundingClientRect().height+colGap+
+        (parseFloat(style.marginTop)||0)+(parseFloat(style.marginBottom)||0);
+    }
+    sibling=sibling.nextElementSibling;
   }
-  const availH=Math.max(150, vh - top - reserved);
+  const availH=Math.max(100, vh - top - reserved);
   const byW=(availW - (S.cols-1)*S.gap) / S.cols;
   const byH=(availH - (S.rows-1)*S.gap) / S.rows;
   return clamp(Math.floor(Math.min(byW, byH)), M.minCell, M.maxCell);
@@ -735,6 +956,8 @@ function blockComplete(r,c){
 function newPiece(pic, q, cell){
   const el=document.createElement('div');
   el.className='pc'; el.style.width=S.cell+'px'; el.style.height=S.cell+'px';
+  el.tabIndex=0; el.setAttribute('role','button');
+  el.setAttribute('aria-label',(pic.title||'图片碎片')+' · '+['左上','右上','左下','右下'][q]);
   const cv=pieceCanvas(pic,q,PX);
   const im=document.createElement('canvas');
   im.className='pc-cv'; im.width=cv.width; im.height=cv.height;
@@ -746,6 +969,12 @@ function newPiece(pic, q, cell){
   const p={ pic, q, el, im, wrap, cell };
   el.__p=p;
   el.addEventListener('pointerdown',ev=>downPiece(ev,p));
+  el.addEventListener('keydown',ev=>{
+    if(!canPlay()) return;
+    if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); S.inspect?inspectPiece(p):selectCell(p.cell); }
+    const delta={ArrowLeft:-1,ArrowRight:1,ArrowUp:-S.cols,ArrowDown:S.cols}[ev.key];
+    if(delta!=null){ ev.preventDefault(); const target=S.occ[p.cell+delta]; if(target) target.el.focus(); }
+  });
   return p;
 }
 function place(p, cell, animate){
@@ -774,11 +1003,32 @@ function layoutBoard(){
   placeSizeAll();
   S.pieces.forEach(p => { if(p.cell>=0){ const q=cellPos(p.cell); p.el.style.transform='translate3d('+q.x+'px,'+q.y+'px,0)'; } });
   markCorrect();
+  updateChallenge();
 }
 
 function markCorrect(){
-  S.pieces.forEach(p=>p.el.classList.remove('onpic','correct'));
+  S.pieces.forEach(p=>p.el.classList.remove('onpic','correct','linked','near'));
   const ordered=new Set(), partial=new Set();
+  if(progress.preferences.links!==false){
+    for(let i=0;i<S.ncells;i++){
+      const a=S.occ[i]; if(!a) continue;
+      const right=i%S.cols<S.cols-1?S.occ[i+1]:null, below=S.occ[i+S.cols];
+      if(right && samePic(a.pic,right.pic) && a.q%2===0 && right.q===a.q+1){
+        a.el.classList.add('linked'); right.el.classList.add('linked');
+      }
+      if(below && samePic(a.pic,below.pic) && a.q<2 && below.q===a.q+2){
+        a.el.classList.add('linked'); below.el.classList.add('linked');
+      }
+    }
+    for(let r=0;r+1<S.rows;r++) for(let c=0;c+1<S.cols;c++){
+      const group=blockCells(r,c).map(i=>S.occ[i]);
+      group.forEach(anchor=>{
+        if(!anchor) return;
+        const matches=group.filter((p,q)=>p && samePic(p.pic,anchor.pic) && p.q===q);
+        if(matches.length===3) matches.forEach(p=>p.el.classList.add('near'));
+      });
+    }
+  }
   for(let r=0;r+1<S.rows;r++) for(let c=0;c+1<S.cols;c++){
     const a=S.occ[r*S.cols+c], b=S.occ[r*S.cols+c+1];
     const d=S.occ[(r+1)*S.cols+c], e=S.occ[(r+1)*S.cols+c+1];
@@ -795,7 +1045,7 @@ function markCorrect(){
 function clearBoard(){
   S.pieces.forEach(p=>p.el.remove());
   S.pieces=[]; S.occ=new Array(S.ncells).fill(null);
-  boardEl.querySelectorAll('.pc,.floatup,.particle,.slothint').forEach(e=>e.remove());
+  boardEl.querySelectorAll('.pc,.floatup,.particle,.slothint,.complete-preview,.region-goal').forEach(e=>e.remove());
 }
 
 /* ==================== queue ==================== */
@@ -858,8 +1108,12 @@ function paintCard(card,pic){
 }
 function pushQueue(){
   const pic=makePic();
+  const run=S.run;
   S.queue.push(pic);
-  ensureSrc(pic).then(()=>{ renderQueue(); preloadHead(); });
+  ensureSrc(pic).then(()=>{
+    if(run!==S.run || S.phase==='loading') return;
+    renderQueue(); preloadHead();
+  });
   return pic;
 }
 function preloadHead(){
@@ -914,11 +1168,18 @@ function renderQueue(){
 
 /* ==================== game start ==================== */
 async function startGame(mode){
+  stopTimer(); cancelDrag();
+  gameTimers.forEach(id=>clearTimeout(id)); gameTimers.clear();
+  const run=++S.run;
+  pauseReasons.clear(); S.paused=false; modalReturn=null;
+  S.undo=null; S.pendingSwap=null; S.inspect=false;
+  S.regionTarget=0; S.regionWins=0; S.regions=new Set();
+  S.hintsUsed=0; S.shufflesUsed=0; S.elapsed=0; S.tutorialSwaps=0;
   S.mode=mode; S.M=CONFIG.modes[mode];
   S.cols=S.M.cols; S.rows=S.M.rows; S.gap=S.M.gap;
   S.mcols=S.cols/2; S.mrows=S.rows/2;
   S.nslots=S.mcols*S.mrows; S.ncells=S.cols*S.rows;
-  S.score=0; S.steps=0; S.lives=S.M.lives; S.cleared=0; S.combo=0;
+  S.score=0; S.steps=0; S.lives=S.M.lives; S.cleared=0; S.combo=0; S.comboRemaining=0;
   S.timeLeft=S.M.timeStart; S.lastTickSec=99;
   S.gallery=[]; S.sel=-1; S.lastClearAt=0;
   S.hint={el:null,tel:null,box:null};
@@ -928,7 +1189,10 @@ async function startGame(mode){
   syncChips(); applyTheme();
   clearBoard();
   hideModal();
-  S.queue=[]; uploadPool.length=0;
+  await Promise.allSettled(uploadReads);
+  if(run!==S.run) return;
+  S.queue=[];
+  packBag=[]; packBagTheme='';
   /* 候补区元素是按「照片实例」建键复用的，重开一局必须把上一局的牌和键表一起清掉，
      否则上一局的牌会被认成同一张、留在页面上 */
   qEls.forEach(el=>el.remove()); qEls.clear();
@@ -939,20 +1203,28 @@ async function startGame(mode){
   $('gall').innerHTML=''; renderGallery();
   updateHud();
   $('note').textContent='正在生成高清图源…';
+  $('gameStatus').textContent='正在准备图片…';
   await Promise.all(S.queue.map(p=>ensureSrc(p)));
-  await fillInitial();
+  if(run!==S.run) return;
+  await fillInitial(run);
+  if(run!==S.run) return;
   S.phase='playing';
+  $('gameStatus').textContent='';
+  if(document.hidden) pauseGame('background');
   startTimer();
   updateHud();
   renderQueue();
-  if(location.hash==='#autosolve') setTimeout(autoSolveStep,600);
+  updateChallenge(); updateTutorial(); updateBest(); layoutBoard();
+  if(S.mode==='tutorial') useHint(false);
+  if(location.hash==='#autosolve') gameLater(autoSolveStep,600);
 }
 
-async function fillInitial(){
+async function fillInitial(run=S.run){
   const pics=[];
   for(let s=0;s<S.nslots;s++){
     const pic=S.queue.shift();
     await ensureSrc(pic);
+    if(run!==S.run) return;
     pic.steps=0; pics.push(pic);
   }
   while(S.queue.length<S.nslots+CONFIG.QUEUE_LEN) pushQueue();
@@ -962,8 +1234,7 @@ async function fillInitial(){
   const blocks=[];
   for(let r=0;r+1<S.rows;r++) for(let c=0;c+1<S.cols;c++) blocks.push([r,c]);
   const pairSets=[[0,1],[0,2],[1,3],[2,3]];      // 4 种「两块正确相邻」的组合
-  /* 上手辅助（plantN）现在两个模式都是 0 → 下面这段不生效，开局全随机打散。
-     想再放回「送分对」只需把模式里的 plant 改回 1 或 2，代码不用动。 */
+  /* Formal modes keep a random opening; the tutorial uses a one-swap opening. */
   const plantCfg = (S.M && S.M.plant!=null) ? S.M.plant : CONFIG.PLANT;
   const plantN = plantCfg>=2 ? 2 : (plantCfg===1 ? 1 : 0);
 
@@ -996,6 +1267,12 @@ async function fillInitial(){
     list=placed.concat(loose.map((o,i)=>({ pic:o.pic, q:o.q, cell:free[i] })));
   } while(tries++<200 && hasAnyComplete(list));
 
+  if(S.mode==='tutorial'){
+    list=[{pic:pics[0],q:0},{pic:pics[0],q:1},{pic:pics[1],q:2},{pic:pics[1],q:3},
+      {pic:pics[0],q:3},{pic:pics[0],q:2},{pic:pics[1],q:1},{pic:pics[1],q:0}]
+      .map((item,cell)=>({...item,cell}));
+  }
+
   list.forEach(o=>{
     const p=newPiece(o.pic,o.q,o.cell);
     S.pieces.push(p);
@@ -1005,7 +1282,7 @@ async function fillInitial(){
     boardEl.appendChild(p.el);
   });
   layoutBoard();
-  $('note').textContent='点两块互换位置，也可直接拖拽 · 开局碎片全随机打散 · 同一张图的四块拼进任意 2×2 相邻格即会消散 · 候补区每张牌只露一小块碎片，认不出原图';
+  $('note').textContent='同一张图的四块拼进任意 2×2 相邻格即可完成';
 }
 /* 给定一份 {cell,pic,q} 列表，判断盘面上是否已经存在拼好的 2×2（开局自检用） */
 function hasAnyComplete(list){
@@ -1023,9 +1300,26 @@ function hasAnyComplete(list){
 
 /* ==================== interaction ==================== */
 let drag=null;
+function cancelDrag(){
+  window.removeEventListener('pointermove',moveDrag);
+  window.removeEventListener('pointerup',upDrag);
+  window.removeEventListener('pointercancel',cancelDrag);
+  if(!drag) return;
+  clearTimeout(drag.hold);
+  const p=drag.p; drag=null;
+  p.el.classList.remove('nomove'); p.el.style.zIndex='';
+  if(S.occ[p.cell]===p) place(p,p.cell,true);
+}
+function inspectPiece(p){
+  cancelDrag();
+  const cv=pieceCanvas(p.pic,p.q,500);
+  showModal('<h2>碎片细节</h2><img class="modalpic" src="'+cv.toDataURL('image/jpeg',.9)+'" alt="放大的图片碎片">'+
+    '<div class="btns"><button class="primary" onclick="hideModal()">返回棋盘</button></div>');
+}
 function cellAtPoint(clientX, clientY){
   const r=boardEl.getBoundingClientRect();
   const x=clientX-r.left, y=clientY-r.top;
+  if(x<0||y<0||x>r.width||y>r.height) return -1;
   let best=-1, bd=Infinity;
   for(let i=0;i<S.ncells;i++){
     const pos=cellPos(i);
@@ -1036,18 +1330,22 @@ function cellAtPoint(clientX, clientY){
   return best;
 }
 function downPiece(ev,p){
-  if(S.phase!=='playing') return;
+  if(!canPlay() || drag || (ev.button!=null && ev.button!==0)) return;
   ev.preventDefault();
+  if(S.inspect){ inspectPiece(p); return; }
   drag={ p, sx:ev.clientX, sy:ev.clientY, moved:false, base:cellPos(p.cell) };
+  drag.hold=gameLater(()=>{ if(drag && !drag.moved) inspectPiece(p); },500);
   clearSfxOnce();
   try{ p.el.setPointerCapture(ev.pointerId); }catch(e){}
   window.addEventListener('pointermove',moveDrag);
   window.addEventListener('pointerup',upDrag);
+  window.addEventListener('pointercancel',cancelDrag);
 }
 function moveDrag(ev){
   if(!drag) return;
   const dx=ev.clientX-drag.sx, dy=ev.clientY-drag.sy;
   if(!drag.moved && Math.abs(dx)+Math.abs(dy)>7){
+    clearTimeout(drag.hold);
     drag.moved=true;
     drag.p.el.classList.add('nomove');
     drag.p.el.style.zIndex=20;
@@ -1063,8 +1361,10 @@ function moveDrag(ev){
 function upDrag(ev){
   window.removeEventListener('pointermove',moveDrag);
   window.removeEventListener('pointerup',upDrag);
+  window.removeEventListener('pointercancel',cancelDrag);
   if(!drag) return;
   const d=drag; drag=null;
+  clearTimeout(d.hold);
   d.p.el.style.zIndex='';
   if(d.moved){
     d.p.el.classList.remove('nomove');
@@ -1078,6 +1378,7 @@ function upDrag(ev){
 let sfxPlayed=false;
 function clearSfxOnce(){ sfxPlayed=false; }
 function selectCell(cell){
+  if(!canPlay()) return;
   const p=S.occ[cell]; if(!p) return;
   if(S.sel<0){ S.sel=cell; p.el.classList.add('sel'); Sfx.pick(); return; }
   if(S.sel===cell){ p.el.classList.remove('sel'); S.sel=-1; Sfx.pick(); return; }
@@ -1086,26 +1387,43 @@ function selectCell(cell){
   doSwap(a,cell);
 }
 function doSwap(a,b){
+  if(!canPlay()) return;
   const pa=S.occ[a], pb=S.occ[b];
   if(!pa||!pb||a===b) return;
+  const keys=new Set([pa.pic.key,pb.pic.key]);
+  const pictures=new Set(S.pieces.filter(p=>keys.has(p.pic.key)).map(p=>p.pic));
+  S.undo={a,b,pa,pb,steps:S.steps,counters:new Map([...pictures].map(pic=>[pic,pic.steps]))};
   S.occ[a]=pb; S.occ[b]=pa;
   place(pa,b,true); place(pb,a,true);
   S.steps++;
   /* 少步奖励按「照片」累计：同图复用时要连带同一张照片的其他实例一起计步 */
-  const keys=new Set([pa.pic.key, pb.pic.key]);
-  S.pieces.forEach(p=>{ if(keys.has(p.pic.key)) p.pic.steps++; });
+  pictures.forEach(pic=>pic.steps++);
   Sfx.swap();
   clearHint();
   markCorrect(); updateHud();
-  setTimeout(tryResolve, 360);
+  S.tutorialSwaps++; updateTutorial();
+  if(S.pendingSwap) clearTimeout(S.pendingSwap);
+  S.pendingSwap=gameLater(tryResolve,360);
+}
+function undoSwap(){
+  if(!canPlay()||!S.undo) return;
+  const u=S.undo; S.undo=null;
+  if(S.occ[u.a]!==u.pb||S.occ[u.b]!==u.pa) return;
+  clearTimeout(S.pendingSwap); S.pendingSwap=null;
+  clearHint(); cancelDrag();
+  if(S.sel>=0){ const selected=S.occ[S.sel]; if(selected) selected.el.classList.remove('sel'); S.sel=-1; }
+  place(u.pa,u.a,true); place(u.pb,u.b,true);
+  u.counters.forEach((steps,pic)=>pic.steps=steps); S.steps=u.steps;
+  markCorrect(); updateHud(); Sfx.pick();
 }
 
 /* ==================== clear & collapse ==================== */
 function tryResolve(){
-  if(S.phase!=='playing') return;
+  if(!canPlay()) return;
   const hit=findCompleteBlock();
   if(!hit) return;
   S.phase='resolving';
+  cancelDrag(); S.undo=null; updateControls();
   resolveBlock(hit.r, hit.c);
 }
 
@@ -1143,7 +1461,7 @@ function scoreFor(pic){
   const base=CONFIG.BASE_SCORE;
   return { timeBonus, stepBonus, base, gain: Math.round((base+timeBonus+stepBonus)*curMul()) };
 }
-function curMul(){ return CONFIG.COMBO_MUL[clamp(S.combo,0,CONFIG.COMBO_MUL.length-1)]; }
+function curMul(){ return CONFIG.COMBO_MUL[clamp(S.combo-1,0,CONFIG.COMBO_MUL.length-1)]; }
 
 function resolveBlock(br, bc){
   clearHint();
@@ -1153,22 +1471,49 @@ function resolveBlock(br, bc){
   const pic=S.occ[ids[0]].pic;
   const r=blockRect(br,bc);
   const now=performance.now();
-  if(now - S.lastClearAt < CONFIG.COMBO_WINDOW) S.combo++; else S.combo=1;
+  if(S.combo>0 && S.comboRemaining>0) S.combo++; else S.combo=1;
   S.lastClearAt=now;
+  S.comboRemaining=CONFIG.COMBO_WINDOW;
 
   const sc=scoreFor(pic);
+  const region=regionAt(br,bc);
+  S.regions.add(region);
+  if(S.mode!=='tutorial' && region===S.regionTarget){
+    sc.gain+=CONFIG.REGION_SCORE; S.regionWins++; S.regionTarget=(S.regionTarget+1)%4;
+    if(S.M.timeStart>0) S.timeLeft+=CONFIG.REGION_TIME;
+    gameLater(()=>toast('区域奖励 · +'+CONFIG.REGION_SCORE+' 分'+(S.M.timeStart?' · +'+CONFIG.REGION_TIME+' 秒':'')),300);
+  }
   S.score += sc.gain;
   S.cleared++;
   if(S.M.timeStart>0) S.timeLeft = Math.min(S.M.timeStart*1.6, S.timeLeft + S.M.timeBonus);
   S.gallery.push({ pic, score:sc.gain, url:thumbURL(pic) });
+  if(pic.kind==='pack'){
+    const entry=progress.collection[pic.key]||{count:0};
+    progress.collection[pic.key]={count:(Number(entry.count)||0)+1,unlockedAt:entry.unlockedAt||Date.now()};
+    saveProgress();
+  }
+  unlockAchievement('first');
+  if(S.regions.size===4) unlockAchievement('explorer');
+  if(S.combo>=4) unlockAchievement('combo');
+  if(Object.keys(progress.collection).length>=10) unlockAchievement('collector');
+  const yuanxin=themePack('yuanxin');
+  if(yuanxin && yuanxin.photos.every(ph=>progress.collection['yuanxin:'+ph.id])) unlockAchievement('yuanxin');
   renderGallery();
-  celebrateIfDue(pic);
+  if(motionEnabled()) celebrateIfDue(pic);
 
   Sfx.clear(S.combo);
-  burst(r.cx,r.cy);
+  if(motionEnabled()) burst(r.cx,r.cy);
   floatText(r.cx, r.y, '+'+sc.gain);
-  if(S.combo>1) setTimeout(()=>floatText(r.cx, r.y-24, '连击 ×'+curMul(), '#ffd166'), 140);
+  if(S.combo>1) gameLater(()=>floatText(r.cx, r.y-24, '连击 ×'+curMul(), '#ffd166'),140);
   updateHud();
+  updateChallenge(); updateTutorial();
+
+  const preview=document.createElement('img'); preview.className='complete-preview'; preview.src=thumbURL(pic);
+  preview.alt=pic.title||'完成的图片';
+  Object.assign(preview.style,{left:r.x+'px',top:r.y+'px',width:r.w+'px',height:r.h+'px'});
+  boardEl.appendChild(preview);
+  const previewMs=motionEnabled()?320:180;
+  gameLater(()=>preview.remove(),previewMs);
 
   let delay=0;
   ids.forEach((ci,k)=>{
@@ -1179,19 +1524,22 @@ function resolveBlock(br, bc){
     p.im.animate([
       {transform:'none',opacity:1},
       {transform:'translate('+dx+'px,'+dy+'px) rotate('+rot+'deg) scale(.45)',opacity:0}
-    ],{duration:520,delay:k*45,easing:'cubic-bezier(.4,.1,.7,.6)',fill:'forwards'});
-    delay=Math.max(delay,520+k*45);
-    setTimeout(()=>p.el.remove(), delay+40);
+    ],{duration:motionEnabled()?420:1,delay:previewMs+(motionEnabled()?k*35:0),easing:'cubic-bezier(.4,.1,.7,.6)',fill:'forwards'});
+    delay=Math.max(delay,previewMs+(motionEnabled()?420+k*35:1));
+    gameLater(()=>p.el.remove(),delay+20);
   });
 
-  setTimeout(()=>{
-    collapseColumns(bc, br);
+  const run=S.run;
+  gameLater(async()=>{
+    if(S.cleared>=S.M.target){ winGame(); return; }
+    await collapseColumns(bc,br);
+    if(run!==S.run) return;
     markCorrect(); updateHud();
-    setTimeout(()=>{
-      if(S.cleared >= S.M.target){ winGame(); return; }
+    gameLater(()=>{
       S.phase='playing';
+      updateHud(); updateChallenge(); updateTutorial();
       tryResolve();
-    }, 380);
+    },motionEnabled()?380:20);
   }, delay+30);
 }
 
@@ -1205,8 +1553,9 @@ function collapseColumns(bc, br){
       if(p) place(p,dst,true);
     }
   }
-  spawnPictureAt(bc, S.rows-2);
+  const spawned=spawnPictureAt(bc,S.rows-2);
   Sfx.drop();
+  return spawned;
 }
 /* 从待入盘队列取一张：优先取「盘面上还没有」的照片。
    队列里可能有「盘上已经出现过的照片」（图集有限、走到后期必然重复），
@@ -1227,11 +1576,13 @@ function takeFromQueue(){
 /* 把一张新图的四块碎片（象限打乱）放进底部 2×2 相邻格，逐块 3D 翻面入场 */
 function spawnPictureAt(bc, r0){
   const pic = takeFromQueue();
+  const run=S.run;
   /* 先补齐队列并立刻重画候补区：首张牌当场飞入棋盘、其余整体前移、末尾滑进一张新牌。
      放在 ensureSrc 之前，前移动画才不会被高清图下载拖住。 */
   while(S.queue.length<S.nslots+CONFIG.QUEUE_LEN) pushQueue();
   renderQueue();
-  ensureSrc(pic).then(()=>{
+  return ensureSrc(pic).then(()=>{
+    if(run!==S.run) return;
     pic.steps=0;
     const cells=blockCells(r0,bc);
     let order=shuffle([0,1,2,3]), guard=0;
@@ -1244,7 +1595,7 @@ function spawnPictureAt(bc, r0){
       p.wrap.animate([
         {transform:'translateY('+Math.round(S.rows*S.cell*0.26)+'px) perspective(760px) rotateY(180deg) scale(.84)',opacity:0},
         {transform:'translateY(0) perspective(760px) rotateY(0deg) scale(1)',opacity:1}
-      ],{duration:480,delay:k*70,easing:'cubic-bezier(.2,.85,.3,1)'});
+      ],{duration:motionEnabled()?480:1,delay:motionEnabled()?k*70:0,easing:'cubic-bezier(.2,.85,.3,1)'});
     });
     markCorrect();
   });
@@ -1260,6 +1611,7 @@ let fxTimer=null, fxSeq=0;
 function hideCelebrate(){
   clearTimeout(fxTimer);
   const box=$('fxpop'); if(box) box.classList.remove('on','out');
+  const img=$('fximg'); if(img) img.onload=null;
 }
 /* 本局已经弹过的「定点彩蛋」照片 —— 图集会被反复取用，同一张图一局里可能拼成两次，
    不记一笔就会连着弹第二遍 */
@@ -1275,21 +1627,24 @@ function celebrateIfDue(pic){
   if(hit && !fxDonePic.has(pic.key)){
     fxDonePic.add(pic.key);
     S.fxAt=null;
-    setTimeout(()=>showCelebrate(hit.gif, hit.cap, hit.hold), 620);
+    gameLater(()=>showCelebrate(hit.gif,hit.cap,hit.hold),620);
     return;
   }
   if(S.fxAt==null || S.cleared!==S.fxAt) return;
   S.fxAt=null;
-  setTimeout(showCelebrate, 620);      // 等飞散动画走完再弹，不然两段动效打架
+  gameLater(()=>showCelebrate(),620);
 }
 function showCelebrate(gif, capText, hold){
+  if(!motionEnabled()||S.paused||S.phase==='over') return;
   const box=$('fxpop'), img=$('fximg'), cap=$('fxcap');
   if(!box || !img) return;
   const src=gif || CONFIG.FX_GIFS[(Math.random()*CONFIG.FX_GIFS.length)|0];
+  const run=S.run;
   if(cap) cap.textContent=capText || CONFIG.FX_CAPS[(Math.random()*CONFIG.FX_CAPS.length)|0];
   clearTimeout(fxTimer);
   img.onerror=()=>{ box.classList.remove('on','out'); };   // 素材不存在：什么都不做
   img.onload=()=>{
+    if(run!==S.run || S.paused || S.phase==='over') return;
     box.classList.remove('out'); box.classList.add('on');
     clearTimeout(fxTimer);
     fxTimer=setTimeout(()=>{
@@ -1305,12 +1660,18 @@ function showCelebrate(gif, capText, hold){
 /* timeStart = 0 表示不限时（当前两个模式都限时，这里保留兜底以防以后加休闲模式） */
 function startTimer(){
   stopTimer();
-  if(!S.M || S.M.timeStart<=0){ S.timeLeft=0; updateTime(); return; }
   S.lastFrame=performance.now();
   S.timer=setInterval(()=>{
-    if(S.phase!=='playing'){ S.lastFrame=performance.now(); return; }
+    if(!canPlay()){ S.lastFrame=performance.now(); return; }
     const now=performance.now();
     const dt=(now-S.lastFrame)/1000; S.lastFrame=now;
+    S.elapsed+=dt;
+    if(S.combo){
+      S.comboRemaining=Math.max(0,S.comboRemaining-dt*1000);
+      if(!S.comboRemaining){ S.combo=0; updateHud(); }
+    }
+    updateCombo();
+    if(S.M.timeStart<=0) return;
     S.timeLeft-=dt;
     if(S.timeLeft<=10){
       const sec=Math.ceil(S.timeLeft);
@@ -1324,24 +1685,23 @@ function stopTimer(){ if(S.timer){ clearInterval(S.timer); S.timer=null; } }
 function fmtTime(t){ const s=Math.max(0,Math.ceil(t)); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
 
 function timeout(){
+  cancelDrag(); S.undo=null; clearHint();
   S.lives--;
   S.score=Math.max(0, S.score-CONFIG.TIMEOUT_PENALTY);
-  S.combo=0;
+  S.combo=0; S.comboRemaining=0; S.shufflesUsed++;
   Sfx.lose();
   if(S.lives<=0){ endGame(false); return; }
   S.timeLeft=S.M.timeStart; S.lastTickSec=99;
-  S.phase='paused';
   updateHud();
-  window.__resumeTimeout = function(){
-    hideModal(); S.phase='playing'; S.lastFrame=performance.now(); reshuffleAll();
-  };
   showModal(
     '<h2>时间到</h2><p class="desc">扣 1 条命、扣分 '+CONFIG.TIMEOUT_PENALTY+'，棋盘重新打乱后继续。<br>还剩 <b>'+S.lives+'</b> 条命。</p>'+
-    '<div class="btns"><button class="primary" onclick="window.__resumeTimeout()">继续</button></div>');
+    '<div class="btns"><button class="primary" onclick="hideModal()">继续</button></div>',()=>reshuffleAll(),false);
 }
 
 /* 只打乱位置：每块碎片自己的「图 + 象限」保持不变，画面与逻辑始终一致 */
 function reshuffleAll(){
+  cancelDrag(); clearHint(); S.undo=null;
+  if(S.sel>=0){ const selected=S.occ[S.sel]; if(selected) selected.el.classList.remove('sel'); S.sel=-1; }
   const onBoard=S.pieces.filter(p=>p.cell>=0);
   if(!onBoard.length) return;
   const cells=onBoard.map(p=>p.cell);
@@ -1353,7 +1713,7 @@ function reshuffleAll(){
   } while(tries++<60 && findCompleteBlock());
   onBoard.forEach(p=>place(p,p.cell,true));
   markCorrect();
-  setTimeout(tryResolve,400);
+  gameLater(tryResolve,400);
 }
 
 /* ==================== hint ==================== */
@@ -1361,27 +1721,20 @@ function reshuffleAll(){
    数出这个位置里已经正确就位的块数；取全盘最高分的那个锚点。 */
 function bestProgress(){
   let best=null;
-  const byPic=new Map();
-  S.pieces.forEach(p=>{
-    if(!(p.cell>=0)) return;
-    let m=byPic.get(p.pic); if(!m){ m={}; byPic.set(p.pic,m); }
-    m[p.q]=p;
-  });
-  byPic.forEach((pos,pic)=>{
-    for(let q=0;q<4;q++){
-      const anchor=pos[q]; if(!anchor) continue;
+  S.pieces.forEach(anchor=>{
+      const q=anchor.q,pic=anchor.pic;
+      if(anchor.cell<0) return;
       const ar=Math.floor(anchor.cell/S.cols)-(q>>1);
       const ac=(anchor.cell%S.cols)-(q%2);
-      if(ar<0||ac<0||ar+1>=S.rows||ac+1>=S.cols) continue;
+      if(ar<0||ac<0||ar+1>=S.rows||ac+1>=S.cols) return;
       let cnt=0; const missing=[];
       for(let k=0;k<4;k++){
         const cell=(ar+(k>>1))*S.cols+(ac+(k%2));
         const p=S.occ[cell];
-        if(p && p.pic===pic && p.q===k) cnt++;
+        if(p && samePic(p.pic,pic) && p.q===k) cnt++;
         else missing.push({ k, cell });
       }
       if(!best || cnt>best.cnt) best={ pic, ar, ac, cnt, missing };
-    }
   });
   return best;
 }
@@ -1389,24 +1742,24 @@ function bestProgress(){
    优先把块内缺的象限从块外换进来（净收益 +1），其次换掉被别的图占着的格子 */
 function planHook(best){
   const cells=new Set(blockCells(best.ar,best.ac));
-  const srcByQ={};
-  S.pieces.forEach(p=>{ if(p.pic===best.pic && p.cell>=0) srcByQ[p.q]=p; });
   let pick=null, bestP=99;
   for(const m of best.missing){
-    const src=srcByQ[m.k];
-    if(!src || src.cell===m.cell) continue;
-    const occ=S.occ[m.cell];
-    const pr = cells.has(src.cell) ? 2 : ((occ && occ.pic!==best.pic) ? 0 : 1);
-    if(pr<bestP){ bestP=pr; pick={ m, src }; }
+    S.pieces.filter(p=>p.cell>=0 && samePic(p.pic,best.pic) && p.q===m.k).forEach(src=>{
+      if(src.cell===m.cell) return;
+      const occ=S.occ[m.cell];
+      const pr=cells.has(src.cell)?2:((occ && !samePic(occ.pic,best.pic))?0:1);
+      if(pr<bestP){ bestP=pr; pick={m,src}; }
+    });
   }
   return pick;
 }
-function useHint(){
-  if(S.phase!=='playing') return;
+function useHint(countUsage=true){
+  if(!canPlay()) return;
   const best=bestProgress();
   if(!best || best.cnt>=4 || !best.missing.length) return;
   const pick=planHook(best);
   if(!pick) return;
+  if(countUsage) S.hintsUsed++;
   S.score=Math.max(0,S.score-S.M.hintCost);
   Sfx.hint(); updateHud(); clearHint();
   const tp=S.occ[pick.m.cell];
@@ -1420,7 +1773,7 @@ function useHint(){
   if(tp) tp.el.classList.add('hintcell');
   const pos=cellPos(pick.src.cell);
   floatText(pos.x+S.cell/2, pos.y, '这块 →', '#ffd166');
-  setTimeout(clearHint, 3000);
+  if(S.mode!=='tutorial') gameLater(clearHint,4000);
 }
 function clearHint(){
   if(S.hint.el) S.hint.el.classList.remove('sel');
@@ -1433,7 +1786,7 @@ function clearHint(){
 /* ==================== gallery / hud ==================== */
 function renderGallery(){
   const host=$('gall'); host.innerHTML='';
-  const need=Math.max(6, Math.min(12, S.M?S.M.target:10));
+  const need=S.M?S.M.target:8;
   for(let i=0;i<need;i++){
     const d=document.createElement('div');
     const g=S.gallery[i];
@@ -1447,9 +1800,15 @@ function renderGallery(){
 }
 function showBigPic(g){
   showModal('<h2>已完成 · 第 '+(S.gallery.indexOf(g)+1)+' 张</h2>'+
-    '<img class="modalpic" src="'+g.url+'">'+
-    '<p class="desc">这张入账 <b>'+g.score+'</b> 分</p>'+
-    '<div class="btns"><button class="primary" onclick="hideModal()">关闭</button></div>');
+    '<img class="modalpic" src="'+g.url+'" alt="'+escapeHTML(g.pic.title||'已完成图片')+'">'+
+    '<p class="desc">'+escapeHTML(g.pic.title||'自定义图片')+(g.pic.artist?'<br>'+escapeHTML(g.pic.artist):'')+
+    '<br>这张入账 <b>'+g.score+'</b> 分</p>'+
+    '<div class="btns"><button class="primary" onclick="hideModal()">返回</button></div>');
+}
+function updateCombo(){
+  const remaining=S.combo?clamp(S.comboRemaining/CONFIG.COMBO_WINDOW,0,1):0;
+  $('comboBar').style.width=(remaining*100)+'%';
+  $('vCombo').textContent='×'+curMul().toFixed(1);
 }
 function updateHud(){
   $('vScore').textContent=S.score.toLocaleString('en-US');
@@ -1462,9 +1821,11 @@ function updateHud(){
   updateTime();
   const pct=S.M?Math.min(100,S.cleared/S.M.target*100):0;
   $('progBar').style.width=pct+'%';
+  updateControls(); updateCombo();
 }
 function updateTime(){
   const unlimited = !S.M || S.M.timeStart<=0;
+  $('hud').classList.toggle('untimed',unlimited);
   $('vTime').textContent = unlimited ? '不限时' : fmtTime(S.timeLeft);
   $('timeCard').classList.toggle('warnbox', !unlimited && S.timeLeft<=10 && S.phase==='playing');
   $('timeCard').style.display = unlimited ? 'none' : '';
@@ -1475,26 +1836,102 @@ function updateTime(){
 /* ==================== end ==================== */
 function winGame(){
   S.phase='over'; stopTimer();
+  S.undo=null; updateControls();
+  if(S.mode==='tutorial') unlockAchievement('tutorial');
+  if(['normal','hard'].includes(S.mode) && !S.hintsUsed && !S.shufflesUsed) unlockAchievement('clean');
+  const bestKey=S.theme+':'+S.mode;
+  const previous=progress.best[bestKey];
+  const newBest=S.mode!=='tutorial' && (!previous || S.score>previous.score);
+  if(newBest){ progress.best[bestKey]={score:S.score,steps:S.steps,elapsed:Math.round(S.elapsed)}; saveProgress(); }
+  updateBest();
   Sfx.win();
   const pics=S.gallery.map(g=>'<div style="background-image:url('+g.url+')"></div>').join('');
-  showModal('<h2>通关！</h2><p class="desc">'+S.M.name+'模式 · '+THEMES[S.theme].name+' · 消除 '+S.cleared+' 张 · 总步数 '+S.steps+
+  showModal('<h2>'+(S.mode==='tutorial'?'练习完成！':'通关！')+'</h2><p class="desc">'+S.M.name+'模式 · '+THEMES[S.theme].name+' · 消除 '+S.cleared+' 张 · 总步数 '+S.steps+
     '<br>最终得分 <b style="font-size:22px;color:#ffd166">'+S.score.toLocaleString('en-US')+'</b></p>'+
+    '<p class="desc">'+(newBest?'新的个人最佳 · ':'')+'区域奖励 '+S.regionWins+' 次 · 提示 '+S.hintsUsed+' 次'+
+    (S.mode==='tutorial'?'<br>接下来可以进入休闲模式':'')+'</p>'+
     '<div class="winpix">'+pics+'</div>'+
-    '<div class="btns"><button class="primary" onclick="hideModal();startGame(\''+S.mode+'\')">再来一局</button>'+
-    '<button onclick="hideModal();openMenu()">换个模式</button></div>');
+    '<div class="btns"><button class="primary" onclick="startGame(\''+(S.mode==='tutorial'?'relax':S.mode)+'\')">'+
+    (S.mode==='tutorial'?'进入休闲':'再来一局')+'</button>'+
+    '<button onclick="openCollection()">查看收藏</button><button onclick="openMenu()">换个模式</button></div>',null,false);
 }
 function endGame(){
   S.phase='over'; stopTimer();
   Sfx.lose();
+  updateControls();
   showModal('<h2>游戏结束</h2><p class="desc">生命用完了。<br>消除了 <b>'+S.cleared+'</b> 张 · 得分 <b>'+S.score.toLocaleString('en-US')+'</b></p>'+
     '<div class="btns"><button class="primary" onclick="hideModal();startGame(\''+S.mode+'\')">重来</button>'+
-    '<button onclick="hideModal();openMenu()">换个模式</button></div>');
+    '<button onclick="hideModal();openMenu()">换个模式</button></div>',null,false);
+}
+
+function updateBest(){
+  const best=progress.best[S.theme+':'+S.mode];
+  $('personalBest').textContent=best?'个人最佳 · '+Number(best.score).toLocaleString('en-US')+' 分 · '+best.steps+' 步':'';
+}
+let collectionTab='classic';
+function openCollection(tab=collectionTab){
+  collectionTab=tab;
+  const tabs=THEME_ORDER.filter(themeAvailable).map(key=>
+    '<button class="'+(key===tab?'on':'')+'" data-album="'+key+'">'+THEMES[key].name+'</button>').join('')+
+    '<button class="'+(tab==='achievements'?'on':'')+'" data-album="achievements">成就</button>';
+  let content='';
+  if(tab==='achievements'){
+    content=Object.entries(ACHIEVEMENTS).map(([key,item])=>
+      '<div class="achievement'+(progress.achievements[key]?' unlocked':'')+'"><i data-lucide="'+
+      (progress.achievements[key]?'award':'lock-keyhole')+'"></i><div><b>'+item.name+
+      '</b><small>'+item.desc+'</small></div></div>').join('');
+  }else{
+    const pk=themePack(tab);
+    if(pk){
+      const unlocked=pk.photos.filter(ph=>progress.collection[tab+':'+ph.id]).length;
+      content='<p class="desc">已收藏 '+unlocked+' / '+pk.photos.length+' 张</p><div class="albumgrid">'+
+        pk.photos.map(ph=>{
+          const entry=progress.collection[tab+':'+ph.id],title=ph.title||('合影 '+ph.id.slice(2));
+          return '<button class="albumitem" data-photo="'+ph.id+'"'+(entry?'':' disabled')+'>'+
+            (entry?'<img src="'+ph.data+'" alt="'+escapeHTML(title)+'" loading="lazy">':
+              '<span class="albumlock"><i data-lucide="lock-keyhole"></i></span>')+
+            '<small>'+escapeHTML(entry?title:'未解锁')+'</small></button>';
+        }).join('')+'</div>';
+    }else content='<p class="desc">暂无主题收藏</p>';
+  }
+  showModal('<h2>收藏与成就</h2><div class="collectiontabs">'+tabs+'</div>'+content+
+    '<div class="btns"><button class="primary" onclick="hideModal()">返回</button></div>',()=>{
+      if(S.phase==='menu') openMenu();
+      else if(S.phase==='over') showResultReturn();
+    });
+  $('sheet').querySelectorAll('[data-album]').forEach(button=>button.onclick=()=>openCollection(button.dataset.album));
+  $('sheet').querySelectorAll('[data-photo]:not(:disabled)').forEach(button=>button.onclick=()=>{
+    const ph=themePack(tab).photos.find(p=>p.id===button.dataset.photo);
+    const entry=progress.collection[tab+':'+ph.id];
+    showModal('<h2>'+escapeHTML(ph.title||('合影 '+ph.id.slice(2)))+'</h2><img class="modalpic" src="'+ph.data+'" alt="'+
+      escapeHTML(ph.title||'收藏图片')+'"><p class="desc">'+escapeHTML(ph.artist||THEMES[tab].name)+
+      '<br>已完成 '+entry.count+' 次</p><div class="btns"><button class="primary" onclick="openCollection(\''+tab+'\')">返回相册</button></div>',()=>openCollection(tab));
+  });
+}
+function showResultReturn(){
+  showModal('<h2>本局已结束</h2><p class="desc">已完成 '+S.cleared+' / '+S.M.target+' 张 · '+S.score+' 分</p>'+
+    '<div class="btns"><button class="primary" onclick="startGame(\''+S.mode+'\')">再来一局</button>'+
+    '<button onclick="openMenu()">换个模式</button></div>',null,false);
 }
 
 /* ==================== modals ==================== */
 let modalReturn=null;
-function showModal(html){ $('sheet').innerHTML=html; $('overlay').classList.add('on'); }
-function hideModal(){ $('overlay').classList.remove('on'); }
+let modalDismissible=true;
+function showModal(html,onClose=null,dismissible=true){
+  pauseGame('modal'); hideCelebrate();
+  modalReturn=onClose; modalDismissible=dismissible;
+  $('sheet').innerHTML=html; $('overlay').classList.add('on');
+  $('sheet').setAttribute('role','dialog'); $('sheet').setAttribute('aria-modal','true');
+  refreshIcons();
+  $('sheet').scrollTop=0;
+  const focusable=$('sheet').querySelector('button:not(:disabled),input'); if(focusable) focusable.focus();
+}
+function hideModal(){
+  const onClose=modalReturn; modalReturn=null;
+  $('overlay').classList.remove('on');
+  if(onClose) onClose();
+  if(!$('overlay').classList.contains('on')) resumeGame('modal');
+}
 window.hideModal=hideModal;
 window.startGame=startGame;
 
@@ -1535,26 +1972,30 @@ function syncThemeChips(){
 }
 
 function openMenu(){
+  cancelDrag();
+  S.run++; gameTimers.forEach(id=>clearTimeout(id)); gameTimers.clear(); hideCelebrate();
   S.phase='menu'; stopTimer();
+  S.undo=null; pauseReasons.clear(); S.paused=false;
+  updateControls();
   const m=n=>CONFIG.modes[n];
-  const opts=['normal','hard'].map(k=>{
+  const opts=['tutorial','relax','normal','hard'].map(k=>{
     const c=m(k);
-    return '<div class="opt '+(S.mode===k?'sel':'')+'" data-m="'+k+'">'+
+    return '<button class="opt '+(S.mode===k?'sel':'')+'" data-m="'+k+'" aria-pressed="'+(S.mode===k)+'">'+
       '<b>'+c.name+'模式</b><small>棋盘 '+c.cols+'×'+c.rows+' ＝ '+c.cols*c.rows+' 格<br>'+
       '同时 '+(c.cols/2*c.rows/2)+' 张图 · 消 '+c.target+' 张通关<br>'+
       (c.timeStart>0 ? '限时 '+fmtTime(c.timeStart)+' · 每消一张 +'+c.timeBonus+'s · '+c.lives+' 条命'
-                     : '不限时 · 无生命，纯休闲')+'</small></div>';
+                     : (k==='tutorial'?'不限时 · 接缝练习':'不限时 · 自由拼合'))+'</small></button>';
   }).join('');
-  showModal('<h2>拼图消消乐</h2><p class="desc">每张图切成 2×2 四块散落在棋盘上。<br>'+
-    '把同一张图的四块拼成一块 <b>2×2 相邻区域</b>（棋盘哪个位置都行），该图就会<b>碎片飞散</b>并消掉，'+
-    '这两列下方的碎片<b>整体上移</b>，底部空位由<b>候补区</b>补一张新图。'+
-    '开局所有碎片<b>全随机打散</b>，没有任何预置的「送分对」。</p>'+
+  showModal('<h2>拼图消消乐</h2><p class="desc">选择本局图集与模式</p>'+
     '<div class="themerow" id="themeRow">'+themeRowHTML()+'</div>'+
     '<div class="optgrid">'+opts+'</div>'+
     '<div class="desc" id="themeHint" style="font-size:12px;margin:-4px 0 10px;display:none"></div>'+
-    '<div class="upzone" id="upzone">＋ 上传自己的图片（可多选）</div>'+
+    '<label class="toggleline"><input type="checkbox" id="prefLinks"'+(progress.preferences.links!==false?' checked':'')+'>接缝反馈</label>'+
+    '<label class="toggleline"><input type="checkbox" id="prefMotion"'+(progress.preferences.motion!==false?' checked':'')+'>庆祝动效</label>'+
+    '<div class="upzone" id="upzone" role="button" tabindex="0">＋ 上传自己的图片</div>'+
+    '<div class="statusline" id="uploadStatus" role="status">'+(uploadPool.length?'已加入 '+uploadPool.length+' 张图片':'')+'</div>'+
     '<div class="btns"><button class="primary" id="goBtn">开始游戏</button>'+
-    '<button onclick="hideModal();showHelp()">玩法说明</button></div>');
+    '<button onclick="openCollection()">收藏与成就</button><button onclick="showHelp()">玩法说明</button></div>',null,false);
   const trow=$('sheet').querySelector('#themeRow');
   trow.querySelectorAll('.tbtn').forEach(b=>{
     if(b.disabled) return;
@@ -1567,10 +2008,14 @@ function openMenu(){
   });
   const grid=$('sheet').querySelector('.optgrid');
   grid.querySelectorAll('.opt').forEach(o=>{
-    o.onclick=()=>{ grid.querySelectorAll('.opt').forEach(x=>x.classList.remove('sel'));
-      o.classList.add('sel'); S.mode=o.dataset.m; renderThemeHint(); };
+    o.onclick=()=>{ grid.querySelectorAll('.opt').forEach(x=>{x.classList.remove('sel'); x.setAttribute('aria-pressed','false');});
+      o.classList.add('sel'); o.setAttribute('aria-pressed','true'); S.mode=o.dataset.m; renderThemeHint(); };
   });
   $('upzone').onclick=()=>$('fileInput').click();
+  $('upzone').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('fileInput').click();}};
+  ['Links','Motion'].forEach(name=>$('pref'+name).onchange=e=>{
+    progress.preferences[name.toLowerCase()]=e.target.checked; saveProgress(); markCorrect();
+  });
   $('goBtn').onclick=()=>{ startGame(S.mode); };
   renderThemeHint();
   syncChips();
@@ -1578,46 +2023,54 @@ function openMenu(){
 window.openMenu=openMenu;
 
 function showHelp(){
-  const wasResolving = S.phase==='playing'||S.phase==='resolving';
-  if(wasResolving) S.phase='paused';
   showModal('<h2>玩法说明</h2><p class="desc">'+
-    '<b>· 主题</b>：顶栏「主题」切换图库。<b>经典图库</b>是 34 幅世界名画（莫奈、梵高、伦勃朗、卡拉瓦乔、葛饰北斋…高清方形图，'+
-    '内嵌在 theme-classic.js，完全离线可玩）；<b>沅信引力</b>是本地 23 张合影图集，内嵌在 theme-yuanxin.js。<br>'+
-    '<b>· 棋盘</b>：普通 4×4＝16 格，同时排布 2×2＝4 张图；困难 6×8＝48 格，同时 12 张。每张图占一个 2×2 格位。<br>'+
-    '<b>· 操作</b>：点第一块选中，再点第二块交换；也可以按住直接拖到目标格。<br>'+
-    '<b>· 消除</b>：某张图的四块拼成一块 <b>2×2 相邻区域</b>、且各自象限正确时，整片飞散消失；'+
-    '这两列中位于空洞下方的碎片整体上移 2 格，底部空位由下方的候补区补一张。<b>拼在棋盘哪个位置都算数</b>，不限定固定的格位。<br>'+
-    '<b>· 候补区</b>：棋盘下方叠着一排牌，牌面是从这张待入盘图上<b>随机抠的一小块局部</b>（位置随机、大小约 30%~48%，放大铺满牌面），'+
-    '所以只看得到一点纹理细节，认不出是什么图。最左那张是「下一张」，它被抽进棋盘后其余的牌整体前移一位、末尾补一张新牌。<br>'+
-    '<b>· 计分</b>：每张 100 基础 + 时间奖励 + 少步奖励，12 秒内连续消除有 ×1.2 / ×1.5 / ×2 连击加成。<br>'+
-    '<b>· 时间</b>：两个模式都是全局倒计时 —— 普通 1:22、困难 2:45，每消除一张自动加时；'+
-    '计时归零扣 1 条命（各 3 条）并重新打乱，命用完即结束。<br>'+
-    '<b>· 通关</b>：普通消除 8 张、困难 16 张。<br>'+
-    '<b>· 彩蛋</b>：每局会在第 2~5 张之间随机挑一张，拼成时弹一个动图庆祝一下再消失（不影响操作、不暂停计时）。'+
-    '素材就是项目目录下的 fx-celebrate-1/2/3.gif；另外有「定点彩蛋」——'+
-    '拼到 CONFIG.FX_PIC 里登记的那张照片时，会按模式弹专属动图（普通 hug_light.gif / 困难 kiss_light.gif）。</p>'+
-    '<div class="btns"><button class="primary" onclick="window.closeSheet()">知道了</button></div>');
+    '<b>拼合</b>：交换或拖动碎片，把同图四块按原图方向排成相邻 2×2；棋盘任意位置都算。<br><br>'+
+    '<b>接缝</b>：正确相邻的碎片会亮起绿色描边，三块就位时亮度更高。<br><br>'+
+    '<b>补牌与区域</b>：完成后两列下方碎片上移，底部补入新图；在指定区域完成额外 +75 分，限时模式另加 4 秒。<br><br>'+
+    '<b>连击</b>：第一张 ×1，12 秒内连续完成依次 ×1.2、×1.5、×2。暂停和消除动画不占连击时间。<br><br>'+
+    '<b>工具</b>：灯泡提示下一步，弯箭头撤销尚未消除的最后一次交换。放大镜可查看碎片，按住碎片也能放大。<br><br>'+
+    '<b>模式</b>：教学和休闲不限时；普通 82 秒、困难 165 秒，每完成一张分别加 12 / 20 秒。时间到扣一条命并重新打乱。<br><br>'+
+    '<b>收藏</b>：主题图片完成后解锁相册，个人最佳成绩和成就会保留到下一局。</p>'+
+    '<div class="btns"><button class="primary" onclick="hideModal()">返回</button></div>',()=>{
+      if(S.phase==='menu') openMenu();
+      else if(S.phase==='over') showResultReturn();
+    });
 }
 window.showHelp=showHelp;
 window.closeSheet=function(){
-  hideModal();
-  if(S.phase==='paused'){ S.phase='playing'; S.lastFrame=performance.now(); }
+  if(modalDismissible) hideModal();
 };
 $('overlay').addEventListener('click',e=>{
   if(e.target.id==='overlay') window.closeSheet();
 });
 
 /* ==================== upload ==================== */
+const uploadReads=[];
 $('fileInput').addEventListener('change',e=>{
   const files=[...e.target.files||[]];
-  files.forEach(f=>{
+  const addToCurrentGame=['playing','resolving'].includes(S.phase),run=S.run;
+  files.filter(f=>f.type.startsWith('image/')).forEach(f=>{
+    const read=new Promise(resolve=>{
     const fr=new FileReader();
-    fr.onload=()=>{
+    fr.onerror=()=>{toast('图片读取失败');resolve();};
+    fr.onload=async()=>{
+      const img=new Image(); img.src=fr.result;
+      try{ await img.decode(); }catch(e){toast('这张图片无法打开');resolve();return;}
+      const cv=document.createElement('canvas'),scale=Math.min(1,1280/Math.max(img.naturalWidth,img.naturalHeight));
+      cv.width=Math.max(1,Math.round(img.naturalWidth*scale)); cv.height=Math.max(1,Math.round(img.naturalHeight*scale));
+      cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
       const key='up'+(++uploadSeq);
-      uploadPool.push({ id:key, key, kind:'upload', url:fr.result, src:null, cvs:{}, thumb:null, steps:0 });
-      $('note').textContent='已加入 '+uploadPool.length+' 张自定义图片，后续入盘的图会用到';
+      const pic={id:key,key,kind:'upload',title:f.name,url:cv.toDataURL('image/jpeg',.9),src:cv,cvs:{},thumb:null,steps:0};
+      if(addToCurrentGame && run===S.run){ S.queue.unshift(pic); renderQueue(); }
+      else uploadPool.push(pic);
+      if($('uploadStatus')) $('uploadStatus').textContent='已加入 '+uploadPool.length+' 张图片';
+      else $('gameStatus').textContent='自定义图片已加入候补区';
+      resolve();
     };
     fr.readAsDataURL(f);
+    });
+    uploadReads.push(read);
+    read.finally(()=>{const i=uploadReads.indexOf(read);if(i>=0) uploadReads.splice(i,1);});
   });
   e.target.value='';
 });
@@ -1650,12 +2103,21 @@ $('tools').addEventListener('click',e=>{
 document.addEventListener('click',e=>{
   if(!e.target.closest('#tools') && e.target.id!=='btnTools') closeTools();
 });
-$('btnMute').onclick=()=>{ const on=Sfx.toggle(); $('btnMute').textContent = on?'🔊 音效':'🔇 静音'; };
+$('btnMute').onclick=()=>{ const on=Sfx.toggle(); $('btnMute').innerHTML='<i data-lucide="'+(on?'volume-2':'volume-x')+'"></i><span>'+(on?'音效':'静音')+'</span>'; refreshIcons(); };
 $('btnHelp').onclick=()=>showHelp();
 $('btnRestart').onclick=()=>{ openMenu(); };
 $('btnHint').onclick=()=>useHint();
+$('btnUndo').onclick=undoSwap;
+$('btnPause').onclick=()=>{
+  showModal('<h2>已暂停</h2><p class="desc">已完成 '+S.cleared+' / '+S.M.target+' 张</p>'+
+    '<div class="btns"><button class="primary" onclick="hideModal()">继续游戏</button>'+
+    '<button onclick="openCollection()">收藏与成就</button></div>');
+};
+$('btnInspect').onclick=()=>{ if(!canPlay()) return; S.inspect=!S.inspect; updateControls(); };
+$('btnCollection').onclick=()=>openCollection();
 $('btnShuffle').onclick=()=>{
-  if(S.phase!=='playing') return;
+  if(!canPlay()) return;
+  S.shufflesUsed++;
   S.score=Math.max(0,S.score-CONFIG.SHUFFLE_COST);
   reshuffleAll(); updateHud();
 };
@@ -1671,32 +2133,50 @@ window.addEventListener('orientationchange',()=>{
   resizeTimer=setTimeout(()=>{ if(S.pieces.length){ layoutBoard(); renderQueue(); } },260);
 });
 window.addEventListener('keydown',e=>{
+  if(e.target.matches('input,textarea')) return;
+  if($('overlay').classList.contains('on')){
+    if(e.key==='Escape'){e.preventDefault();window.closeSheet();}
+    if(e.key==='Tab'){
+      const buttons=[...$('sheet').querySelectorAll('button:not(:disabled),input,[tabindex="0"]')];
+      const first=buttons[0],last=buttons[buttons.length-1];
+      if(e.shiftKey && document.activeElement===first){e.preventDefault();last.focus();}
+      else if(!e.shiftKey && document.activeElement===last){e.preventDefault();first.focus();}
+    }
+    return;
+  }
   if(e.key==='h'||e.key==='H') useHint();
   if(e.key==='m'||e.key==='M') $('btnMute').click();
   if(e.key==='Escape') clearHint();
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();undoSwap();}
+});
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){pauseGame('background');hideCelebrate();}
+  else resumeGame('background');
 });
 
 /* ==================== test hooks ==================== */
 window.__game=S; window.__swap=doSwap; window.__start=startGame; window.__resolve=tryResolve;
 /* 内置自动解法（仅自测用：地址栏加 #autosolve 触发） */
 function autoSolveStep(){
-  if(S.phase!=='playing'){ setTimeout(autoSolveStep,420); return; }
-  if(!S.pieces.length){ setTimeout(autoSolveStep,420); return; }
+  if(S.phase==='over'||S.phase==='menu') return;
+  if(!canPlay()||!S.pieces.length){ gameLater(autoSolveStep,420); return; }
   const best=bestProgress();
   if(best && best.cnt<4 && best.missing.length){
     const pick=planHook(best);
-    if(pick){ doSwap(pick.src.cell, pick.m.cell); setTimeout(autoSolveStep,400); return; }
+    if(pick){ doSwap(pick.src.cell,pick.m.cell); gameLater(autoSolveStep,400); return; }
   }
-  setTimeout(autoSolveStep,600);
+  gameLater(autoSolveStep,600);
 }
 
 /* ==================== boot ==================== */
+S.mode=progress.achievements.tutorial?'normal':'tutorial';
 S.M=CONFIG.modes[S.mode];
 S.lives=S.M.lives;
 if(!themeAvailable(S.theme)) S.theme='classic';
 applyTheme();
 updateHud();
 openMenu();
+refreshIcons();
 </script>
 </body>
 </html>
