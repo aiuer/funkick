@@ -346,10 +346,12 @@ button:disabled{opacity:.38;cursor:default}
   z-index:150;background:var(--panel2);border:1px solid var(--ok);border-radius:8px;padding:10px 15px;
   max-width:calc(100% - 24px);font-size:13px;box-shadow:0 6px 22px rgba(0,0,0,.4);pointer-events:none;display:none}
 #toast.on{display:block}
-#fxpop{inset:auto 14px max(14px,env(safe-area-inset-bottom)) auto;padding:0;justify-content:flex-end}
-#fximg{width:110px;border-radius:8px}
-.fxcap{font-size:11px;padding:4px 8px;letter-spacing:0}
-.fxbox{gap:4px}
+#fxpop{inset:0;padding:20px;justify-content:center;background:rgba(4,7,16,.4);z-index:120}
+#fximg{width:min(78vw,360px);max-height:58dvh;object-fit:contain;border-radius:10px;background:var(--panel)}
+.fxcap{font-size:15px;padding:6px 14px;letter-spacing:0;white-space:normal;text-align:center;max-width:80vw}
+.fxbox{gap:10px;pointer-events:auto}
+.fxcontinue{border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--txt);
+  padding:10px 20px;min-height:44px;font-size:13px;cursor:pointer}
 .optgrid{grid-template-columns:1fr 1fr}
 .sheet{border-radius:8px}
 .sheet .desc{overflow-wrap:anywhere}
@@ -368,7 +370,7 @@ button:disabled{opacity:.38;cursor:default}
   .stage{gap:14px}
   .albumgrid{gap:8px}
   .opt{padding:10px}
-  #fximg{width:86px}
+  #fximg{width:min(78vw,300px)}
 }
 @media(max-height:560px) and (orientation:landscape){
   body{padding-top:6px;padding-bottom:6px}
@@ -469,7 +471,7 @@ button:disabled{opacity:.38;cursor:default}
 
 <div id="overlay"><div class="sheet" id="sheet"></div></div>
 <!-- 彩蛋动图：第 2~5 张消除时随机弹一次，播完自动消失。pointer-events:none，不吃操作 -->
-<div id="fxpop"><div class="fxbox"><img id="fximg" alt=""><div class="fxcap" id="fxcap">拼成啦！</div></div></div>
+<div id="fxpop" role="dialog" aria-label="拼图奖励" aria-modal="true"><div class="fxbox"><img id="fximg" alt="拼图彩蛋"><div class="fxcap" id="fxcap">拼成啦！</div><button class="fxcontinue" id="btnCelebrateClose">继续拼图</button></div></div>
 <input type="file" id="fileInput" accept="image/*" multiple style="display:none">
 <div id="toast" role="status" aria-live="polite"></div>
 
@@ -479,6 +481,7 @@ button:disabled{opacity:.38;cursor:default}
      · theme-yuanxin.js —— 23 张本地双人合影，缺了则隐藏该主题 -->
 <script src="theme-classic.js"></script>
 <script src="theme-yuanxin.js"></script>
+<script src="resource-loader.js"></script>
 <script src="lucide.min.js"></script>
 
 <script>
@@ -585,7 +588,7 @@ const ACHIEVEMENTS={
   combo:{name:'心流时刻',desc:'连续完成四张图片，达到 ×2 连击'},
   collector:{name:'小小收藏家',desc:'解锁 10 张不同的主题图片'},
   tutorial:{name:'准备好了',desc:'完成教学练习'},
-  yuanxin:{name:'引力相册',desc:'集齐 23 张沅信引力图片'}
+  yuanxin:{name:'引力相册',desc:'集齐当前主题图集的全部图片'}
 };
 function unlockAchievement(key){
   if(progress.achievements[key]) return;
@@ -695,7 +698,7 @@ function makePic(){
        判定一律比 key，不能比对象引用 */
     const key = theme + ':' + ph.id;
     return { id:key, key, pid:key, kind:'pack', title:ph.title||('合影 '+ph.id.slice(2)),
-      artist:ph.artist||'', theme, url:ph.data, src:null, cvs:{}, thumb:null, steps:0 };
+      artist:ph.artist||'', theme, url:ph.data, effects:ph.effects||{}, src:null, cvs:{}, thumb:null, steps:0 };
   }
   const pid = 'p' + nextPhotoId();
   return { id:pid, key:pid, pid, kind:'remote', url:null, src:null, cvs:{}, thumb:null, steps:0 };
@@ -1499,7 +1502,7 @@ function resolveBlock(br, bc){
   const yuanxin=themePack('yuanxin');
   if(yuanxin && yuanxin.photos.every(ph=>progress.collection['yuanxin:'+ph.id])) unlockAchievement('yuanxin');
   renderGallery();
-  if(motionEnabled()) celebrateIfDue(pic);
+  const reward=celebrateIfDue(pic);
 
   Sfx.clear(S.combo);
   if(motionEnabled()) burst(r.cx,r.cy);
@@ -1531,8 +1534,13 @@ function resolveBlock(br, bc){
 
   const run=S.run;
   gameLater(async()=>{
-    if(S.cleared>=S.M.target){ winGame(); return; }
+    if(S.cleared>=S.M.target){
+      if(reward) await reward;
+      if(run!==S.run) return;
+      winGame(); return;
+    }
     await refillPicture(ids);
+    if(reward) await reward;
     if(run!==S.run) return;
     markCorrect(); updateHud();
     gameLater(()=>{
@@ -1636,54 +1644,63 @@ function refillPicture(holes){
    · 不影响操作：整层 pointer-events:none、也不暂停计时
    · 素材缺失（只拷了 HTML 没拷 gif）会静默跳过，不报错不卡流程
    · 想换素材：把 fx-celebrate-*.gif 覆盖成自己的动图，或改 CONFIG.FX_GIFS */
-let fxTimer=null, fxSeq=0;
+let fxTimer=null, fxSeq=0, finishReward=null;
+const fxDonePic = new Set();
 function hideCelebrate(){
   clearTimeout(fxTimer);
   const box=$('fxpop'); if(box) box.classList.remove('on','out');
-  const img=$('fximg'); if(img) img.onload=null;
+  const img=$('fximg'); if(img){img.onload=null;img.onerror=null;}
+  const done=finishReward; finishReward=null;
+  resumeGame('celebration');
+  if(done) done();
 }
-/* 本局已经弹过的「定点彩蛋」照片 —— 图集会被反复取用，同一张图一局里可能拼成两次，
-   不记一笔就会连着弹第二遍 */
-const fxDonePic = new Set();
 function resetCelebrate(){
   S.fxAt = CONFIG.FX_RANGE[0] + ((Math.random()*(CONFIG.FX_RANGE[1]-CONFIG.FX_RANGE[0]+1))|0);
   fxDonePic.clear();
 }
-/* 定点彩蛋优先于随机彩蛋：拼到 CONFIG.FX_PIC 里登记的照片 + 当前模式有配置，就弹指定动图，
-   并且把 S.fxAt 清掉（两者互斥），否则会连着弹两次。 */
 function celebrateIfDue(pic){
-  const hit = pic && CONFIG.FX_PIC[pic.key] && CONFIG.FX_PIC[pic.key][S.mode];
+  const configured=pic?.effects?.[S.mode];
+  const legacy=pic && CONFIG.FX_PIC[pic.key]?.[S.mode];
+  const hit=configured || (legacy && {media:legacy.gif,caption:legacy.cap,hold:legacy.hold,poster:thumbURL(pic)});
   if(hit && !fxDonePic.has(pic.key)){
-    fxDonePic.add(pic.key);
-    S.fxAt=null;
-    gameLater(()=>showCelebrate(hit.gif,hit.cap,hit.hold),620);
-    return;
+    fxDonePic.add(pic.key); S.fxAt=null;
+    return new Promise(resolve=>gameLater(()=>{
+      showCelebrate(hit.media,hit.caption,hit.hold,hit.poster).then(resolve);
+    },620));
   }
-  if(S.fxAt==null || S.cleared!==S.fxAt) return;
+  if(S.fxAt==null || S.cleared!==S.fxAt || !motionEnabled()) return null;
   S.fxAt=null;
-  gameLater(()=>showCelebrate(),620);
+  return new Promise(resolve=>gameLater(()=>showCelebrate().then(resolve),620));
 }
-function showCelebrate(gif, capText, hold){
-  if(!motionEnabled()||S.paused||S.phase==='over') return;
-  const box=$('fxpop'), img=$('fximg'), cap=$('fxcap');
-  if(!box || !img) return;
-  const src=gif || CONFIG.FX_GIFS[(Math.random()*CONFIG.FX_GIFS.length)|0];
-  const run=S.run;
-  if(cap) cap.textContent=capText || CONFIG.FX_CAPS[(Math.random()*CONFIG.FX_CAPS.length)|0];
-  clearTimeout(fxTimer);
-  img.onerror=()=>{ box.classList.remove('on','out'); };   // 素材不存在：什么都不做
-  img.onload=()=>{
-    if(run!==S.run || S.paused || S.phase==='over') return;
-    box.classList.remove('out'); box.classList.add('on');
-    clearTimeout(fxTimer);
-    fxTimer=setTimeout(()=>{
-      box.classList.add('out');
-      fxTimer=setTimeout(()=>box.classList.remove('on','out'), 360);
-    }, hold || CONFIG.FX_HOLD);
-  };
-  /* 末尾挂一个片段标识：同一张 gif 连续两局命中时也能从头播，而不是接着上一局那一帧 */
-  img.src=src+'#'+(++fxSeq);
+function showCelebrate(media,caption,hold,poster){
+  const reduced=!motionEnabled();
+  if(S.paused || !['playing','resolving'].includes(S.phase) || (reduced && !poster)) return Promise.resolve();
+  const box=$('fxpop'),img=$('fximg'),cap=$('fxcap'),run=S.run;
+  if(!box || !img) return Promise.resolve();
+  hideCelebrate();
+  const src=reduced?poster:(media||CONFIG.FX_GIFS[(Math.random()*CONFIG.FX_GIFS.length)|0]);
+  return new Promise(resolve=>{
+    finishReward=resolve;
+    cap.textContent=caption||CONFIG.FX_CAPS[(Math.random()*CONFIG.FX_CAPS.length)|0];
+    let fallback=false;
+    img.onerror=()=>{
+      if(poster && !fallback){fallback=true;img.src=poster;}
+      else hideCelebrate();
+    };
+    img.onload=()=>{
+      if(run!==S.run || (S.paused && !pauseReasons.has('celebration')) || S.phase==='over'){hideCelebrate();return;}
+      clearTimeout(fxTimer);
+      pauseGame('celebration');
+      box.classList.remove('out');box.classList.add('on');
+      $('btnCelebrateClose').focus({preventScroll:true});
+      fxTimer=setTimeout(hideCelebrate,reduced?2400:(hold||3200));
+    };
+    // Timeout releases the game if neither the animation nor its poster loads.
+    fxTimer=setTimeout(hideCelebrate,8000);
+    img.src=src+'#'+(++fxSeq);
+  });
 }
+$('btnCelebrateClose').onclick=hideCelebrate;
 
 /* ==================== timer ==================== */
 /* timeStart = 0 表示不限时（当前两个模式都限时，这里保留兜底以防以后加休闲模式） */
@@ -2163,6 +2180,11 @@ window.addEventListener('orientationchange',()=>{
 });
 window.addEventListener('keydown',e=>{
   if(e.target.matches('input,textarea')) return;
+  if($('fxpop').classList.contains('on')){
+    if(e.key==='Escape'||e.key==='Enter'||e.key===' '){e.preventDefault();hideCelebrate();}
+    if(e.key==='Tab'){e.preventDefault();$('btnCelebrateClose').focus();}
+    return;
+  }
   if($('overlay').classList.contains('on')){
     if(e.key==='Escape'){e.preventDefault();window.closeSheet();}
     if(e.key==='Tab'){
@@ -2198,14 +2220,14 @@ function autoSolveStep(){
 }
 
 /* ==================== boot ==================== */
-S.mode=progress.achievements.tutorial?'normal':'tutorial';
-S.M=CONFIG.modes[S.mode];
-S.lives=S.M.lives;
-if(!themeAvailable(S.theme)) S.theme='classic';
-applyTheme();
-updateHud();
-openMenu();
-refreshIcons();
+async function boot(){
+  await window.loadYuanxinResources?.();
+  S.mode=progress.achievements.tutorial?'normal':'tutorial';
+  S.M=CONFIG.modes[S.mode]; S.lives=S.M.lives;
+  if(!themeAvailable(S.theme)) S.theme='classic';
+  applyTheme(); updateHud(); openMenu(); refreshIcons();
+}
+boot();
 </script>
 </body>
 </html>

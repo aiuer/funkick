@@ -177,6 +177,7 @@ async function verifyProtectedRefill(page){
     await page.getByRole('button', { name: '成就', exact: true }).click();
     await capture(page, 'achievements');
     await page.reload();
+    await page.waitForSelector('#goBtn');
     assert.deepEqual(await page.evaluate(() => progress.collection), saved.collection);
     assert.equal(await page.evaluate(() => __game.mode), 'normal');
 
@@ -256,7 +257,7 @@ async function verifyProtectedRefill(page){
     await page.waitForTimeout(350);
     assert.equal(await page.locator('.complete-preview').count(),0);
     assert.equal(await page.evaluate(()=>__game.pieces.length),48);
-    await page.evaluate(()=>{progress.preferences.motion=true;showCelebrate('fx-celebrate-1.gif','');});
+    await page.evaluate(()=>{progress.preferences.motion=true;void showCelebrate('fx-celebrate-1.gif','');});
     await page.waitForFunction(()=>$('fxpop').classList.contains('on') && $('fximg').naturalWidth>0);
     await page.click('#btnPause');
     assert.equal(await page.locator('#fxpop').isVisible(),false);

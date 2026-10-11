@@ -1,2 +1,7 @@
 # 排除压缩包，不纳入版本管理
 puzzle-heart.zip
+releases/
+.DS_Store
+__pycache__/
+.env
+.env.*

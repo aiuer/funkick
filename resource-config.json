@@ -1,0 +1,31 @@
+{
+  "source": "~/Documents/XINWONPIC",
+  "theme": "yuanxin",
+  "name": "沅信引力",
+  "effects": [
+    {
+      "photo": "Camera_1040g3k831kjujm602u705p3b5123oj18bg7r3q8.jpg",
+      "file": "img-1758200674074007VIUwNly1i5i4b5p93og30in0b4kjn.gif",
+      "caption": "拼成啦～",
+      "modes": ["tutorial", "relax", "normal", "hard"]
+    },
+    {
+      "photo": "img-176190274814781f2086cb27e79cd9eab6fadc1c7a2ca74b747b086fafad30274c5cacecf95c6.jpg",
+      "file": "008tfVllly1ianvt36tg5g30qy0hye8b.gif",
+      "caption": "漂亮！再来一张～",
+      "modes": ["tutorial", "relax", "normal", "hard"]
+    },
+    {
+      "photo": "0088Md9Kgy1ien8oevk0oj32dt1kw1ky.jpg",
+      "file": "hug_light.gif",
+      "caption": "抱一下～",
+      "modes": ["tutorial", "relax", "normal"]
+    },
+    {
+      "photo": "0088Md9Kgy1ien8oevk0oj32dt1kw1ky.jpg",
+      "file": "kiss_light.gif",
+      "caption": "亲一个～",
+      "modes": ["hard"]
+    }
+  ]
+}
